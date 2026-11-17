@@ -11,6 +11,7 @@ FROM nginx:1.27-alpine
 # entrypoint rather than baked in at build time.
 ENV GATEWAY_URL=""
 COPY deploy/nginx.conf /etc/nginx/nginx.conf
+COPY deploy/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY deploy/default.conf /etc/nginx/conf.d/default.conf
 COPY deploy/docker-entrypoint.sh /docker-entrypoint.d/40-path-config.sh
 COPY --from=build /app/dist /usr/share/nginx/html
