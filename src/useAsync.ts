@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Unauthorized } from "./api";
 import { useAuth } from "./auth";
 
@@ -8,9 +8,10 @@ interface State<T> {
   loading: boolean;
 }
 
-/** Runs a loader on mount (and when its dependency changes) and surfaces 401 as sign-out. */
-export function useAsync<T>(load: () => Promise<T>, deps: unknown[] = []): State<T> {
+/** Runs a loader on mount and exposes a reload for after a mutation. */
+export function useAsync<T>(load: () => Promise<T>, deps: unknown[] = []) {
   const { signOut } = useAuth();
+  const [nonce, setNonce] = useState(0);
   const [state, setState] = useState<State<T>>({ data: null, error: null, loading: true });
 
   useEffect(() => {
@@ -32,7 +33,11 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[] = []): State
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, nonce]);
 
-  return state;
+  const reload = useCallback(async () => {
+    setNonce((n) => n + 1);
+  }, []);
+
+  return { ...state, reload };
 }

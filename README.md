@@ -64,3 +64,47 @@ table otherwise. See the gateway's `docs/ADMIN-UI.md`.
 - No charting library: the numbers that matter are small integers and currency, not
   sparklines.
 - No state manager, no component library, ~100 KB gzipped total.
+
+## Deploy on Dokploy
+
+Dokploy builds the `Dockerfile` and runs it; the image is 25 MB of nginx plus ~110 KB of
+assets.
+
+1. **Create an application** → source: this repository → build: Dockerfile.
+2. **Environment** → `GATEWAY_URL=https://gw.example.com` (no trailing slash).
+   Leave it **empty** if a reverse proxy serves this UI and the gateway on the same
+   hostname — then the browser calls `/admin/**` on its own origin and there is no CORS.
+3. **Port** → the container listens on `8080`. Point the domain at it and enable HTTPS.
+4. **Healthcheck** → `GET /healthz` returns `200 ok`; the image already declares it.
+
+On the gateway side, one setting decides whether the browser is allowed to call it:
+
+```bash
+# The UI's public origin, exactly (no wildcard, no trailing slash)
+GATEWAY_CORS_ORIGINS=https://admin.example.com
+```
+
+`X-Admin-Token` is a custom header, so the browser sends a preflight; the gateway allows
+`*` headers and the admin methods already.
+
+### Same hostname instead (recommended)
+
+Put both behind one hostname and skip CORS entirely:
+
+```
+https://path.example.com/          → gateway  :8080
+https://path.example.com/admin-ui/ → this UI  :8080
+```
+
+Dokploy/Traefik `PathPrefix(/admin-ui)` routes to this container; strip the prefix so the
+UI is served from `/`, and leave `GATEWAY_URL` empty. `_redirects` is unnecessary there —
+nginx already falls back to `index.html`.
+
+### Before it is reachable from the internet
+
+- Put the UI behind **Cloudflare Access** or a VPN, or restrict the deployment so only your
+  network reaches it; the admin token is the only other barrier.
+- Use a **read-scoped** admin token for the dashboard and a write-scoped one only when you
+  are making changes (`POST /admin/tokens`).
+- The token lives in `sessionStorage` in this design, so it is per-tab and dies on close;
+  no cookie, no `allowCredentials`, no CSRF surface.
