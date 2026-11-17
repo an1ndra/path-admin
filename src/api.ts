@@ -116,7 +116,7 @@ async function failure(response: Response, url: string): Promise<Error> {
 
 /** Write calls share the same auth, error envelope and 401 handling as reads. */
 export async function send<T>(
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
 ): Promise<T> {

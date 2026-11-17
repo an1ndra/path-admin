@@ -8,6 +8,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { RoutesPage } from "./pages/RoutesPage";
 import { KeysPage } from "./pages/KeysPage";
 import { ProvidersPage } from "./pages/ProvidersPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import "./styles.css";
 
 const rootRoute = createRootRoute({
@@ -23,6 +24,7 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: "/routes", component: RoutesPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/keys", component: KeysPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/providers", component: ProvidersPage }),
+  createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/login", component: Login }),
 ];
 

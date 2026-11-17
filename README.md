@@ -13,7 +13,8 @@ gateway.
 | Dashboard | `GET /admin/stats?window=<range>`, `GET /admin/providers`, `GET /admin/usage?window=<range>` |
 | Routes | `GET /admin/routes` |
 | Keys | `GET /admin/keys` |
-| Providers | `GET /admin/providers` |
+| Providers | `GET/POST/PATCH/DELETE /admin/providers`, `POST /admin/providers/{id}/probe` |
+| Settings | `GET/PUT /admin/mail-settings`, `POST /admin/alerts/test` |
 
 Dashboard: range selector (24h / 48h / 3d / 7d / 30d, remembered per browser), requests
 over time, spend and requests by model, provider circuits, recent failures with the error

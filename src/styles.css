@@ -226,3 +226,7 @@ button.ghost.small { padding: 3px 8px; font-size: 12px; }
   background: #0b0e14; border: 1px solid var(--line); color: var(--text);
   padding: 7px 9px; border-radius: 6px; font: inherit; color-scheme: dark;
 }
+
+.settings-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.settings-body .modal-actions { margin-top: 4px; }
+.muted.small { font-size: 12px; margin: 0; }
