@@ -1,0 +1,4 @@
+# Cloudflare Pages. Build with `npm run build`, publish `dist`.
+name = "path-admin"
+compatibility_date = "2026-11-01"
+pages_build_output_dir = "dist"
