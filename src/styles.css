@@ -50,15 +50,19 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 12px; }
 .link { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; font: inherit; text-align: left; }
 
-.content { padding: 28px 32px 60px; max-width: 1180px; width: 100%; min-width: 0; }
+/* Fill the viewport. A fixed max-width left a band of dead space on wide screens, which is
+   what a dashboard should never do: the panels are the content. */
+.content { padding: 28px 32px 60px; width: 100%; min-width: 0; }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; margin-bottom: 20px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .stat-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 .stat-value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .stat-sub { color: var(--muted); font-size: 12px; }
 
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-bottom: 20px; }
+/* align-items:start so a short panel (Top models with one row) does not stretch to match
+   its neighbour and leave a big empty box next to it. */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-bottom: 20px; align-items: start; }
 /* Below this width the sidebar becomes a horizontal bar: a 208px column plus a table is
    unusable on a laptop with the browser at half width, let alone a tablet. */
 @media (max-width: 940px) {
