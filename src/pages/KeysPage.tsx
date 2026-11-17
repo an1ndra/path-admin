@@ -3,6 +3,7 @@ import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { usd, when } from "../format";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
+import { ErrorNote } from "../components/ErrorNote";
 import { Fields, Modal, toPayload, useForm, type FieldSpec } from "../components/form";
 import type { KeyRow } from "../types";
 
@@ -39,7 +40,7 @@ export function KeysPage() {
       setNote("Key created. Copy it now — it is shown once.");
       await keys.reload();
     } catch (e) {
-      form.setError(e instanceof Error ? e.message : "Failed");
+      form.setError(e);
     } finally {
       form.setBusy(false);
     }
@@ -89,7 +90,7 @@ export function KeysPage() {
         {keys.loading ? (
           <Loading />
         ) : keys.error ? (
-          <p className="error">{keys.error}</p>
+          <ErrorNote error={keys.error} />
         ) : (keys.data ?? []).length === 0 ? (
           <Empty>No keys yet.</Empty>
         ) : (
@@ -136,7 +137,7 @@ export function KeysPage() {
       {creating ? (
         <Modal title="New client key" onClose={() => setCreating(false)}>
           <Fields spec={SPEC} form={form} />
-          {form.error ? <p className="error">{form.error}</p> : null}
+          {form.error ? <ErrorNote error={form.error} /> : null}
           <div className="modal-actions">
             <button className="ghost" onClick={() => setCreating(false)}>Cancel</button>
             <button className="primary" disabled={form.busy} onClick={create}>

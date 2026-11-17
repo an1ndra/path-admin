@@ -3,6 +3,7 @@ import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { ms, usd } from "../format";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
+import { ErrorNote } from "../components/ErrorNote";
 import { Fields, Modal, toPayload, useForm, type FieldSpec } from "../components/form";
 import type { ProviderRow, RouteRow } from "../types";
 
@@ -55,7 +56,7 @@ export function RoutesPage() {
       setNote("Route created.");
       await routes.reload();
     } catch (e) {
-      form.setError(e instanceof Error ? e.message : "Failed");
+      form.setError(e);
     } finally {
       form.setBusy(false);
     }
@@ -95,7 +96,7 @@ export function RoutesPage() {
         {routes.loading ? (
           <Loading />
         ) : routes.error ? (
-          <p className="error">{routes.error}</p>
+          <ErrorNote error={routes.error} />
         ) : (routes.data ?? []).length === 0 ? (
           <Empty>No routes yet.</Empty>
         ) : (
@@ -148,7 +149,7 @@ export function RoutesPage() {
       {creating ? (
         <Modal title="New route" onClose={() => setCreating(false)}>
           <Fields spec={fields} form={form} />
-          {form.error ? <p className="error">{form.error}</p> : null}
+          {form.error ? <ErrorNote error={form.error} /> : null}
           <div className="modal-actions">
             <button className="ghost" onClick={() => setCreating(false)}>Cancel</button>
             <button className="primary" disabled={form.busy} onClick={create}>

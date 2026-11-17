@@ -17,7 +17,7 @@ export type Values = Record<string, string>;
 export function useForm(initial: Values) {
   const [values, setValues] = useState<Values>(initial);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   return {
     values,
     busy,
@@ -119,8 +119,10 @@ export function Modal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <header>
           <h2>{title}</h2>
-          <button className="link" onClick={onClose}>
-            Close
+          <button className="icon-btn" onClick={onClose} aria-label="Close dialog" title="Close">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path d="M3.7 3.7a1 1 0 0 1 1.4 0L8 6.6l2.9-2.9a1 1 0 1 1 1.4 1.4L9.4 8l2.9 2.9a1 1 0 0 1-1.4 1.4L8 9.4l-2.9 2.9a1 1 0 0 1-1.4-1.4L6.6 8 3.7 5.1a1 1 0 0 1 0-1.4Z" fill="currentColor" />
+            </svg>
           </button>
         </header>
         {children}

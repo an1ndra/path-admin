@@ -180,3 +180,36 @@ td.actions button { padding: 4px 8px; font-size: 12px; margin-left: 6px; }
 .field input[type="checkbox"] { width: 16px; height: 16px; padding: 0; }
 .field small { color: var(--muted); font-size: 11px; }
 @media (max-width: 640px) { .fields { grid-template-columns: 1fr; } }
+
+/* --- errors ------------------------------------------------------------ */
+
+.error-box { border: 1px solid #f8514955; background: #f8514910; border-radius: 6px; padding: 10px 12px; margin: 0 0 14px; }
+.error-line { color: #ffa198; }
+.error-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; }
+button.ghost.small { padding: 3px 8px; font-size: 12px; }
+
+/* --- charts ------------------------------------------------------------ */
+
+.chart { padding: 14px 16px 10px; }
+.chart-rows { display: flex; align-items: flex-end; }
+.chart-col { display: flex; align-items: flex-end; gap: 2px; width: 100%; height: 122px; }
+.bar-slot { flex: 1 1 0; display: flex; align-items: flex-end; min-width: 1px; }
+.bar { width: 100%; background: #2f5d8a; border-radius: 2px 2px 0 0; min-height: 2px; transition: background .12s; }
+.bar:hover { background: var(--accent); }
+.bar.peak { background: var(--accent); }
+.chart-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 6px; }
+.chart-foot { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+.ranked { padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ranked-row { display: grid; grid-template-columns: 150px 1fr 84px; gap: 10px; align-items: center; font-size: 13px; }
+.ranked-label { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranked-track { background: #0b0e14; border: 1px solid var(--line); border-radius: 4px; height: 10px; overflow: hidden; }
+.ranked-fill { display: block; height: 100%; background: #2f5d8a; }
+.ranked-value { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.range { display: flex; gap: 4px; }
+.range button { font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+.range button.on { color: var(--text); border-color: var(--accent); background: #4da3ff1a; }
+
+.icon-btn { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 4px; display: inline-flex; }
+.icon-btn:hover { color: var(--text); background: #1b2230; }

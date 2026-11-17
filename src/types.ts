@@ -65,9 +65,13 @@ export interface UsageRow {
   model: string;
   provider: string;
   status: string;
-  error_code?: string | null;
   cost_usd: number | string;
   total_tokens: number;
   latency_ms: number;
   end_user?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  upstream_request_id?: string | null;
+  attempts?: number;
+  fallback_from?: string | null;
 }

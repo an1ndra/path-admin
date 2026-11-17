@@ -10,13 +10,18 @@ gateway.
 
 | Screen | Calls |
 |---|---|
-| Dashboard | `GET /admin/stats?window=24h`, `?window=30d`, `GET /admin/providers`, `GET /admin/usage` |
+| Dashboard | `GET /admin/stats?window=<range>`, `GET /admin/providers`, `GET /admin/usage?window=<range>` |
 | Routes | `GET /admin/routes` |
 | Keys | `GET /admin/keys` |
 | Providers | `GET /admin/providers` |
 
-All read-only in this build. Every write still goes through the admin API directly, so the
-audit log stays complete.
+Dashboard: range selector (24h / 48h / 3d / 7d / 30d, remembered per browser), requests
+over time, spend and requests by model, provider circuits, recent failures with the error
+message and the gateway request id.
+
+Providers, routes and client keys can be created, edited and deleted from the UI; each one
+is the audited admin endpoint, so `/admin/audit` stays complete. Errors show the message,
+HTTP status, error code and request id, with a copy button for a bug report.
 
 ## Auth
 
