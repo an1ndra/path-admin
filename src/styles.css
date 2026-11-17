@@ -48,6 +48,7 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 .nav:hover { background: var(--panel); color: var(--text); }
 .nav.active { background: var(--panel); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
 .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 12px; }
+.build { color: var(--muted); opacity: .7; }
 .link { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; font: inherit; text-align: left; }
 
 /* Fill the viewport. A fixed max-width left a band of dead space on wide screens, which is

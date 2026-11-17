@@ -40,6 +40,7 @@ export function Layout() {
           <button className="link" onClick={signOut}>
             Sign out
           </button>
+          <code className="build" title="build stamp">build {__BUILD_ID__}</code>
         </div>
       </aside>
       <main className="content">

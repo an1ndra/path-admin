@@ -42,6 +42,15 @@ export async function api<T>(path: string): Promise<T> {
   if (!response.ok) {
     throw new Error(await messageOf(response));
   }
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("json")) {
+    // Almost always the admin console calling itself instead of the gateway: the static
+    // server answers with index.html and JSON.parse would say "Unexpected token '<'".
+    throw new Error(
+      `${BASE || "this origin"}${path} answered with ${contentType || "no content type"}, not JSON. ` +
+        "The console is probably pointed at the wrong gateway: check GATEWAY_URL (config.js).",
+    );
+  }
   return (await response.json()) as T;
 }
 

@@ -6,6 +6,8 @@ import react from "@vitejs/plugin-react";
 // deployment uses.
 export default defineConfig({
   plugins: [react()],
+  // Stamped into the footer: if a browser is running an old bundle, it says so.
+  define: { __BUILD_ID__: JSON.stringify(Date.now().toString(36).slice(-6)) },
   build: { outDir: "dist", sourcemap: false },
   server: { port: 5173 },
 });
