@@ -99,6 +99,8 @@ GATEWAY_CORS_ORIGINS=https://admin.example.com
 `X-Admin-Token` is a custom header, so the browser sends a preflight; the gateway allows
 `*` headers and the admin methods already.
 
+Full walkthrough: [`deploy/dokploy/README.md`](deploy/dokploy/README.md).
+
 ### Same hostname instead (recommended)
 
 Put both behind one hostname and skip CORS entirely:
