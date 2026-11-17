@@ -67,6 +67,10 @@ export interface UsageRow {
   status: string;
   cost_usd: number | string;
   total_tokens: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  cached_input_tokens?: number;
+  cached_savings_usd?: number | string;
   latency_ms: number;
   end_user?: string | null;
   error_code?: string | null;

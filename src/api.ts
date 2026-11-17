@@ -158,4 +158,16 @@ function networkHint(e: unknown, url: string): string {
   );
 }
 
+/** True when the gateway is behind an authenticating proxy, i.e. no token is needed. */
+export async function detectAuthMode(): Promise<"proxy" | "token"> {
+  try {
+    const response = await fetch(`${BASE}/admin/settings`);
+    if (!response.ok) return "token";
+    const body = await response.json();
+    return body?.auth_mode === "proxy" ? "proxy" : "token";
+  } catch {
+    return "token";
+  }
+}
+
 export const gatewayOrigin = BASE || window.location.origin;

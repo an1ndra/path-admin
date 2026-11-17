@@ -11,10 +11,13 @@ const NAV = [
 ] as const;
 
 export function Layout() {
-  const { token, signOut } = useAuth();
+  const { token, mode, signOut } = useAuth();
   const path = useRouterState({ select: (s) => s.location.pathname });
 
-  if (!token) {
+  if (mode === "unknown") {
+    return <p className="empty">Checking how this console is authenticated…</p>;
+  }
+  if (mode === "token" && !token) {
     return <Login />;
   }
 
@@ -37,9 +40,13 @@ export function Layout() {
         </nav>
         <div className="sidebar-foot">
           <code title={gatewayOrigin}>{trimOrigin(gatewayOrigin)}</code>
-          <button className="link" onClick={signOut}>
-            Sign out
-          </button>
+          {mode === "proxy" ? (
+            <span className="muted">signed in via SSO</span>
+          ) : (
+            <button className="link" onClick={signOut}>
+              Sign out
+            </button>
+          )}
           <code className="build" title="build stamp">build {__BUILD_ID__}</code>
         </div>
       </aside>

@@ -25,7 +25,13 @@ HTTP status, error code and request id, with a copy button for a bug report.
 
 ## Auth
 
-The admin token is pasted on the login screen and kept in `sessionStorage` **only** — never
+Two modes, detected at load from `GET /admin/settings`:
+
+- **`proxy`** — the gateway is behind an authenticating proxy (Authentik, Keycloak,
+  oauth2-proxy, Cloudflare Access). The browser is already signed in, so the token screen
+  is skipped and the sidebar says "signed in via SSO". Google/GitHub/enterprise SSO, 2FA
+  and passkeys come from that IdP; see the gateway's `docs/SSO.md`.
+- **`token`** — the admin token is pasted on the login screen and kept in `sessionStorage` **only** — never
 a cookie, never a URL, and gone when the tab closes. Every request sends it as
 `X-Admin-Token`. A 401 or 403 clears it and returns to the login screen.
 
