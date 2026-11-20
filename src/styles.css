@@ -53,7 +53,8 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 
 /* Fill the viewport. A fixed max-width left a band of dead space on wide screens, which is
    what a dashboard should never do: the panels are the content. */
-.content { padding: 28px 32px 60px; width: 100%; min-width: 0; }
+.content {
+  min-width: 0; overflow-x: hidden; padding: 28px 32px 60px; width: 100%; }
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
@@ -88,7 +89,8 @@ nav { display: flex; flex-direction: column; gap: 2px; }
   .sidebar-foot { margin-top: 0; margin-left: auto; flex-direction: row; align-items: center; gap: 10px; }
   .sidebar-foot code { display: none; }
   .grid { grid-template-columns: minmax(0, 1fr); }
-  .content { padding: 20px 16px 48px; }
+  .content {
+  min-width: 0; overflow-x: hidden; padding: 20px 16px 48px; }
   h1 { font-size: 18px; }
 }
 
@@ -100,7 +102,9 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 }
 
 /* Wide tables scroll inside their panel; the page itself never grows sideways. */
-html, body { max-width: 100%; overflow-x: hidden; }
+/* No overflow-x on html/body: it makes them the scroll container and breaks
+   position: sticky for the sidebar. The content column contains its own width. */
+html, body { max-width: 100%; }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; overflow: hidden; min-width: 0; }
 /* Wide tables scroll inside their panel instead of pushing the grid out of the viewport. */
