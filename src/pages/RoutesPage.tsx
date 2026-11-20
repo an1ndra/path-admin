@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, send } from "../api";
 import { useAsync } from "../useAsync";
+import { capabilities } from "../capabilities";
 import { ms, usd } from "../format";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
@@ -10,6 +11,9 @@ import type { ProviderRow, RouteRow } from "../types";
 export function RoutesPage() {
   const routes = useAsync(() => api<RouteRow[]>("/admin/routes"), []);
   const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), []);
+  const caps = useAsync(capabilities, []);
+  const canWrite = caps.data?.can_write !== false;
+  const readOnlyHint = canWrite ? undefined : "This token is read-only";
   const [creating, setCreating] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
@@ -47,11 +51,22 @@ export function RoutesPage() {
             cache and failover strategy. Disable a route to pull it from traffic without deleting it.
           </p>
         </div>
-        <button type="button" className="primary" onClick={() => setCreating(true)}>
+        <button
+          type="button"
+          className="primary"
+          onClick={() => setCreating(true)}
+          disabled={!canWrite}
+          title={readOnlyHint}
+        >
           Add model
         </button>
       </header>
 
+      {!canWrite ? (
+        <p className="note page-note" role="note">
+          This token is read-only. Adding, enabling, disabling and deleting routes are disabled.
+        </p>
+      ) : null}
       {note ? (
         <p className="note page-note" role="status">
           {note}
@@ -150,6 +165,8 @@ export function RoutesPage() {
                       type="button"
                       className="ghost"
                       onClick={() => toggle(r)}
+                      disabled={!canWrite}
+                      title={readOnlyHint}
                       aria-label={`${r.enabled ? "Disable" : "Enable"} route ${r.public_model_id}`}
                     >
                       {r.enabled ? "Disable" : "Enable"}
@@ -158,6 +175,8 @@ export function RoutesPage() {
                       type="button"
                       className="danger"
                       onClick={() => remove(r)}
+                      disabled={!canWrite}
+                      title={readOnlyHint}
                       aria-label={`Delete route ${r.public_model_id}`}
                     >
                       Delete

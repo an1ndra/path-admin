@@ -193,7 +193,10 @@ export function Ranked({
   format: (value: number) => string;
 }) {
   if (data.length === 0) return <p className="empty">Nothing to rank yet.</p>;
-  const max = Math.max(...data.map((d) => d.value), 1);
+  // Scale to the largest value, not to 1: spend per model is often sub-dollar,
+  // and a floor of 1 made every bar invisible (0.01% width).
+  const peak = Math.max(...data.map((d) => d.value));
+  const max = peak > 0 ? peak : 1;
 
   return (
     <div className="dash-rank">

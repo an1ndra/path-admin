@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AuthProvider } from "./auth";
+import { ThemeProvider } from "./theme";
 import { Layout } from "./components/Layout";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
@@ -14,9 +15,11 @@ import "./styles.css";
 
 const rootRoute = createRootRoute({
   component: () => (
-    <AuthProvider>
-      <Layout />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Layout />
+      </AuthProvider>
+    </ThemeProvider>
   ),
 });
 

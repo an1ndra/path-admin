@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, gatewayOrigin, setToken } from "../api";
 import { useAsync } from "../useAsync";
 import { useAuth } from "../auth";
+import { useTheme, type ThemeMode } from "../theme";
 import { Badge, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import type { GatewaySettings } from "../types";
@@ -22,6 +23,7 @@ function describeScope(scope: string): string {
 /** Who you are and which token this console is using. Gateway switches live on Configuration. */
 export function SettingsPage() {
   const { mode, signIn, signOut } = useAuth();
+  const { mode: themeMode, colorBlind, resolved, setMode: setThemeMode, setColorBlind } = useTheme();
   const settings = useAsync(() => api<GatewaySettings>("/admin/settings"), []);
   const [token, setTokenValue] = useState("");
   const [note, setNote] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export function SettingsPage() {
                 <Badge tone={mode === "proxy" ? "info" : "neutral"}>
                   {mode === "proxy" ? "SSO proxy" : "Admin token"}
                 </Badge>
-                <Badge tone={readOnly ? "warn" : "good"} dot>
+                <Badge tone={readOnly ? "neutral" : "info"} dot>
                   {readOnly ? "read-only" : "read and write"}
                 </Badge>
               </div>
@@ -101,7 +103,7 @@ export function SettingsPage() {
                 <ul className="page-scope-list">
                   {scopes.map((scope) => (
                     <li key={scope}>
-                      <Badge tone={scope === "write" ? "good" : "neutral"}>{scope}</Badge>
+                      <Badge tone={scope === "write" ? "info" : "neutral"}>{scope}</Badge>
                       <span>{describeScope(scope)}</span>
                     </li>
                   ))}
@@ -168,6 +170,44 @@ export function SettingsPage() {
             )}
           </div>
         )}
+      </Panel>
+
+      <Panel title="Appearance" hint="stored in this browser">
+        <div className="settings-body">
+          <div className="page-appearance-row">
+            <span className="page-appearance-label" id="theme-label">
+              Theme
+            </span>
+            <div className="segmented" role="group" aria-labelledby="theme-label">
+              {(["system", "light", "dark"] as ThemeMode[]).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={themeMode === value ? "on" : ""}
+                  aria-pressed={themeMode === value}
+                  onClick={() => setThemeMode(value)}
+                >
+                  {value === "system" ? `System · ${resolved}` : value[0].toUpperCase() + value.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="appearance-check">
+            <input
+              type="checkbox"
+              checked={colorBlind}
+              onChange={(e) => setColorBlind(e.target.checked)}
+            />
+            <span>
+              <strong>Colour-blind friendly palette</strong>
+              <small>
+                Status uses blue, orange and vermillion instead of red and green. Every state is
+                still written out, so colour is never the only signal.
+              </small>
+            </span>
+          </label>
+        </div>
       </Panel>
     </>
   );

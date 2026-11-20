@@ -58,10 +58,12 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   sessionStorage.setItem(TOKEN_KEY, token);
+  import("./capabilities").then((m) => m.resetCapabilities()).catch(() => {});
 }
 
 export function clearToken(): void {
   sessionStorage.removeItem(TOKEN_KEY);
+  import("./capabilities").then((m) => m.resetCapabilities()).catch(() => {});
 }
 
 export async function api<T>(path: string): Promise<T> {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, send } from "../api";
 import { useAsync } from "../useAsync";
+import { capabilities } from "../capabilities";
 import { usd, when } from "../format";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
@@ -101,6 +102,9 @@ const SPEC: FieldSpec[] = [...IDENTITY, ...BUDGETS, ...LIMITS];
 
 export function KeysPage() {
   const keys = useAsync(() => api<KeyRow[]>("/admin/keys"), []);
+  const caps = useAsync(capabilities, []);
+  const canWrite = caps.data?.can_write !== false;
+  const readOnlyHint = canWrite ? undefined : "This token is read-only";
   const form = useForm({});
   const [creating, setCreating] = useState(false);
   const [topUp, setTopUp] = useState<KeyRow | null>(null);
@@ -208,10 +212,17 @@ export function KeysPage() {
             setIssued(null);
             setCreating(true);
           }}
+          disabled={!canWrite}
+          title={readOnlyHint}
         >
           New key
         </button>
       </div>
+      {!canWrite ? (
+        <p className="note" role="note">
+          This token is read-only. Creating keys, topping up and revoking are disabled.
+        </p>
+      ) : null}
       {note ? <p className="note">{note}</p> : null}
       {issued ? (
         <p className="note mono">
@@ -259,11 +270,23 @@ export function KeysPage() {
                     <Badge tone={k.enabled ? "good" : "neutral"}>{k.enabled ? "active" : "revoked"}</Badge>
                   </td>
                   <td className="actions">
-                    <button type="button" className="ghost" onClick={() => openTopUp(k)}>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => openTopUp(k)}
+                      disabled={!canWrite}
+                      title={readOnlyHint}
+                    >
                       Top up
                     </button>
                     {k.enabled ? (
-                      <button type="button" className="danger" onClick={() => revoke(k)}>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => revoke(k)}
+                        disabled={!canWrite}
+                        title={readOnlyHint}
+                      >
                         Revoke
                       </button>
                     ) : null}

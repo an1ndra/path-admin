@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, send } from "../api";
 import { useAsync } from "../useAsync";
+import { capabilities } from "../capabilities";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import {
@@ -101,6 +102,9 @@ const FIELDS: FieldSpec[] = [...IDENTITY, ...ENDPOINT, ...VERTEX, ...CREDENTIAL]
 
 export function ProvidersPage() {
   const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), []);
+  const caps = useAsync(capabilities, []);
+  const canWrite = caps.data?.can_write !== false;
+  const readOnlyHint = canWrite ? undefined : "This token is read-only";
   const form = useForm({ type: "openai" });
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ProviderRow | null>(null);
@@ -302,10 +306,17 @@ export function ProvidersPage() {
             form.reset({ type: "openai" });
             setCreating(true);
           }}
+          disabled={!canWrite}
+          title={readOnlyHint}
         >
           New provider
         </button>
       </div>
+      {!canWrite ? (
+        <p className="note" role="note">
+          This token is read-only. Creating, editing, probing and deleting providers are disabled.
+        </p>
+      ) : null}
       {note ? <p className="note">{note}</p> : null}
       <Panel title="Upstreams" hint="circuit state is per JVM">
         {providers.loading ? (
@@ -349,13 +360,31 @@ export function ProvidersPage() {
                     </Badge>
                   </td>
                   <td className="actions">
-                    <button type="button" className="ghost" onClick={() => startEdit(p)}>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => startEdit(p)}
+                      disabled={!canWrite}
+                      title={readOnlyHint}
+                    >
                       Edit
                     </button>
-                    <button type="button" className="ghost" onClick={() => probe(p)}>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => probe(p)}
+                      disabled={!canWrite}
+                      title={readOnlyHint}
+                    >
                       Probe
                     </button>
-                    <button type="button" className="danger" onClick={() => remove(p)}>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => remove(p)}
+                      disabled={!canWrite}
+                      title={readOnlyHint}
+                    >
                       Delete
                     </button>
                   </td>

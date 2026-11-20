@@ -497,7 +497,10 @@ export function Dashboard() {
             <>
               <span>{usd(s.cache?.savings_usd)} saved</span>
               {s.cache?.semantic_hits !== undefined ? (
-                <span>{num(s.cache.semantic_hits)} semantic hits</span>
+                <span>
+                  {num(s.cache.semantic_hits)} semantic hit
+                  {s.cache.semantic_hits === 1 ? "" : "s"}
+                </span>
               ) : (
                 <span>{num(s.cache?.cached_input_tokens)} cached tokens</span>
               )}

@@ -43,7 +43,7 @@
 }
 .dialog .field input[aria-invalid="true"]:focus-visible,
 .dialog .field select[aria-invalid="true"]:focus-visible {
-  box-shadow: 0 0 0 3px #f9706633;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 20%, transparent);
 }
 
 /* The footer status strip is both the live summary and the server-error slot:
@@ -51,9 +51,9 @@
    its buttons never move. */
 .dialog .dlg-summary.is-error {
   gap: 8px;
-  color: #ffb4ab;
-  border-color: #f9706655;
-  background: #f9706610;
+  color: var(--bad-text);
+  border-color: color-mix(in srgb, var(--bad) 33%, transparent);
+  background: color-mix(in srgb, var(--bad) 6%, transparent);
 }
 .dialog .dlg-summary .dlg-status-text {
   min-width: 0;
@@ -70,7 +70,7 @@
   color: var(--d-required);
 }
 .dialog .dlg-summary.is-error .dlg-status-text {
-  color: #ffb4ab;
+  color: var(--bad-text);
 }
 
 /* Current-versus-new readout, used where a dialog edits stored settings. */
@@ -119,13 +119,13 @@
   display: inline-block;
   margin-right: 6px;
   padding: 1px 6px;
-  border: 1px solid #3d82f659;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: 999px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.7px;
   text-transform: uppercase;
-  color: #8db6ff;
+  color: var(--accent);
 }
 .dialog .dlg-flag.quiet {
   border-color: var(--d-border);

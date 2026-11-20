@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, send } from "../api";
 import { useAsync } from "../useAsync";
+import { capabilities } from "../capabilities";
 import { Badge, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import {
@@ -95,6 +96,9 @@ function mailSections(current: MailSettings | null | undefined): {
 /** Gateway switches and delivery. Account and token live on Settings. */
 export function ConfigurationPage() {
   const settings = useAsync(() => api<GatewaySettings>("/admin/settings"), []);
+  const caps = useAsync(capabilities, []);
+  const canWrite = caps.data?.can_write !== false;
+  const readOnlyHint = canWrite ? undefined : "This token is read-only";
   const mail = useAsync(() => api<MailSettings>("/admin/mail-settings"), []);
   const form = useForm({});
   const [note, setNote] = useState<string | null>(null);
@@ -234,6 +238,12 @@ export function ConfigurationPage() {
 
   return (
     <>
+      {!canWrite ? (
+        <p className="note" role="note">
+          This token is read-only. Changing mail settings, sending a test alert or rendering a
+          digest are disabled.
+        </p>
+      ) : null}
       <header className="page-head page-head-titled">
         <div className="page-head-titles">
           <h1>Configuration</h1>
@@ -265,7 +275,7 @@ export function ConfigurationPage() {
               <dd>
                 {(gw?.scopes ?? []).length > 0 ? (
                   (gw?.scopes ?? []).map((scope) => (
-                    <Badge key={scope} tone={scope === "write" ? "good" : "neutral"}>
+                    <Badge key={scope} tone={scope === "write" ? "info" : "neutral"}>
                       {scope}
                     </Badge>
                   ))
@@ -340,11 +350,23 @@ export function ConfigurationPage() {
 
             <div className="modal-actions">
               {currentMail?.configured ? (
-                <button type="button" className="ghost" onClick={disableMail}>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={disableMail}
+                  disabled={!canWrite}
+                  title={readOnlyHint}
+                >
                   Disable
                 </button>
               ) : null}
-              <button type="button" className="ghost" disabled={busy} onClick={testAlert}>
+              <button
+                type="button"
+                className="ghost"
+                disabled={busy || !canWrite}
+                title={readOnlyHint}
+                onClick={testAlert}
+              >
                 Send test alert
               </button>
               <button
@@ -354,6 +376,8 @@ export function ConfigurationPage() {
                   form.reset({});
                   setMailOpen(true);
                 }}
+                disabled={!canWrite}
+                title={readOnlyHint}
               >
                 {currentMail?.configured ? "Edit email" : "Configure email"}
               </button>
@@ -373,7 +397,13 @@ export function ConfigurationPage() {
             model. It reuses the alert mailbox above and sends nothing for an empty day.
           </p>
           <div className="modal-actions">
-            <button type="button" className="ghost" disabled={busy} onClick={testDigest}>
+            <button
+              type="button"
+              className="ghost"
+              disabled={busy || !canWrite}
+              title={readOnlyHint}
+              onClick={testDigest}
+            >
               {busy ? "Working…" : "Render yesterday's digest"}
             </button>
           </div>
