@@ -33,6 +33,18 @@ function daysBetween(from: string, to: string): number {
 
 const RANGE_KEY = "path.admin.range";
 
+const DAY_SHORT = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" });
+const DAY_LONG = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+/** "13 Nov – 20 Nov 2026" instead of the ISO pair. */
+function rangeText(from: string, to: string): string {
+  if (!from || !to) return "Custom range";
+  const start = new Date(`${from}T00:00:00`);
+  const end = new Date(`${to}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "Custom range";
+  return `${DAY_SHORT.format(start)} – ${DAY_LONG.format(end)}`;
+}
+
 export function Dashboard() {
   const [rangeId, setRangeId] = useState<string>(
     () => localStorage.getItem(RANGE_KEY) ?? "24h",
@@ -48,7 +60,8 @@ export function Dashboard() {
 
   const custom = rangeId === "custom";
   const preset = PRESETS.find((r) => r.id === rangeId) ?? PRESETS[0];
-  const span = daysBetween(from, to);
+  const validRange = Boolean(from && to) && from <= to;
+  const span = validRange ? daysBetween(from, to) : 0;
   // Stats and usage take a window, so a custom range asks for everything from its start and
   // narrows to the end date here.
   const window: string = custom ? `${span + 1}d` : preset.window;
@@ -56,7 +69,7 @@ export function Dashboard() {
     ? Math.max(60 * 60 * 1000, Math.round((span * DAY) / 24 / (60 * 60 * 1000)) * 60 * 60 * 1000)
     : preset.bucketMs;
   const dateLabels = custom ? span > 2 : Boolean(preset.dateLabels);
-  const label = custom ? `${from} → ${to}` : preset.label;
+  const label = custom ? rangeText(from, to) : preset.label;
 
   function pick(next: Preset) {
     localStorage.setItem(RANGE_KEY, next.id);
@@ -199,7 +212,7 @@ export function Dashboard() {
   return (
     <>
       <div className="page-head">
-        <h1>{custom ? `${from} → ${to}` : `Last ${label}`}</h1>
+        <h1>{custom ? label : `Last ${label}`}</h1>
         <div className="range" role="group" aria-label="Time range">
           {PRESETS.map((r) => (
             <button
@@ -215,6 +228,7 @@ export function Dashboard() {
             className={custom ? "on" : ""}
             onClick={() => setCustomOpen((open) => !open)}
             aria-pressed={custom}
+            aria-expanded={customOpen}
           >
             Custom
           </button>
@@ -222,36 +236,46 @@ export function Dashboard() {
       </div>
 
       {customOpen ? (
-        <div className="custom-range">
-          <label>
+        <div className="custom-range" role="group" aria-label="Custom date range">
+          <label className="range-field">
             <span>From</span>
             <input
               type="date"
               value={from}
-              max={to}
+              max={to || undefined}
               onChange={(e) => setFrom(e.target.value)}
             />
           </label>
-          <label>
+          <span className="range-sep" aria-hidden="true">→</span>
+          <label className="range-field">
             <span>To</span>
             <input
               type="date"
               value={to}
-              min={from}
+              min={from || undefined}
               max={isoDay(new Date())}
               onChange={(e) => setTo(e.target.value)}
             />
           </label>
-          <span className="muted">{span} day{span === 1 ? "" : "s"}</span>
-          <button className="primary" onClick={applyCustom}>
-            Show range
+          <span className="range-span" aria-live="polite">
+            {validRange ? `${span} ${span === 1 ? "day" : "days"}` : "Pick both dates"}
+          </span>
+          <button className="primary" onClick={applyCustom} disabled={!validRange}>
+            Apply
+          </button>
+          <button
+            className="icon-btn range-close"
+            aria-label="Close date range"
+            onClick={() => setCustomOpen(false)}
+          >
+            ✕
           </button>
         </div>
       ) : null}
 
       <div className="stats">
         <Stat label="Requests" value={num(s.requests)} sub={`${num(s.total_tokens)} tokens`} />
-        <Stat label="Spend" value={usd(s.cost_usd)} sub={custom ? `${span} days` : `over ${label}`} />
+        <Stat label="Spend" value={usd(s.cost_usd)} sub={custom ? `over ${span} days` : `over ${label}`} />
         <Stat
           label="Cache"
           value={`${Math.round((s.cache?.hit_ratio ?? 0) * 100)}%`}
