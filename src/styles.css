@@ -129,14 +129,61 @@ td.right, th.right { text-align: right; font-variant-numeric: tabular-nums; }
 .error { color: var(--bad); }
 .warn-line { margin: 0; padding: 10px 16px; border-top: 1px solid var(--line); color: #e3b341; font-size: 13px; }
 
-.login { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 28px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
-.card h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; margin: 0; }
-.card label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.card input { background: #0b0e14; border: 1px solid var(--line); color: var(--text); padding: 10px 12px; border-radius: 6px; font: inherit; }
-.card input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-.card button { background: var(--accent); color: #04121f; border: 0; padding: 10px 14px; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; }
-.card button:disabled { opacity: .5; cursor: default; }
+.login {
+  min-height: 100vh; display: grid; place-items: center; padding: 24px;
+  background:
+    radial-gradient(60rem 30rem at 50% -10%, #12203a 0%, transparent 60%),
+    var(--bg);
+}
+.login-panel {
+  width: 100%; max-width: 430px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 28px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 24px 60px #00000066;
+}
+.login-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: .02em; }
+.login-tag {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px;
+}
+.login-panel h1 { font-size: 18px; margin: 6px 0 0; }
+.login-lede { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.login-lede code, .login-hint code {
+  color: var(--text); background: #0b0e14; border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 5px; font-size: 11px;
+}
+.login-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.login-form > label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+}
+.login-field { position: relative; display: flex; }
+.login-field input {
+  width: 100%; height: 40px; padding: 0 64px 0 12px; border-radius: 7px;
+  background: #0b0e14; border: 1px solid var(--line); color: var(--text); font: inherit;
+}
+.login-field input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px #4da3ff26; }
+.login-field input[aria-invalid="true"] { border-color: var(--bad); }
+.login-reveal {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 11px;
+  padding: 4px 8px; border-radius: 5px; cursor: pointer;
+}
+.login-reveal:hover { color: var(--text); background: #ffffff0d; }
+.login-hint { margin: 0; font-size: 11px; color: var(--muted); line-height: 1.5; }
+.login-error {
+  margin: 0; padding: 8px 10px; border-radius: 6px;
+  border: 1px solid #f8514955; background: #f8514910; color: #ffb4ab; font-size: 12px;
+}
+.login-submit {
+  margin-top: 4px; height: 40px; border: 0; border-radius: 7px;
+  background: var(--accent); color: #04121f; font: inherit; font-weight: 600; cursor: pointer;
+}
+.login-submit:hover:not(:disabled) { filter: brightness(1.08); }
+.login-submit:disabled { opacity: .5; cursor: default; }
+.login-foot {
+  margin: 4px 0 0; padding-top: 12px; border-top: 1px solid var(--line);
+  font-size: 11px; color: var(--muted); line-height: 1.5;
+}
 
 /* --- write paths ------------------------------------------------------- */
 
@@ -360,8 +407,10 @@ button.ghost.small { padding: 3px 8px; font-size: 12px; }
   border-top: 1px solid var(--d-border);
   box-shadow: inset 0 10px 10px -10px #00000080, inset 0 -12px 12px -12px #00000090;
   /* Overlay scrollbars draw over the content; this keeps notes and inputs clear. */
-  padding-right: 12px; margin-right: -12px;
+  padding-right: 12px; margin-right: -12px; padding-bottom: 10px;
   scrollbar-width: thin; scrollbar-color: #2b3648 transparent;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
 }
 .dialog-scroll .dlg-section:first-child { margin-top: 0; padding-top: 12px; border-top: 0; }
 .dlg-section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--d-border); }
