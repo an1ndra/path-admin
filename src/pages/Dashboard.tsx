@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import { useAsync } from "../useAsync";
 import { ms, num, usd, when } from "../format";
@@ -57,6 +57,36 @@ export function Dashboard() {
     return isoDay(d);
   });
   const [to, setTo] = useState<string>(() => isoDay(new Date()));
+  const customPop = useRef<HTMLDivElement>(null);
+  const customButton = useRef<HTMLButtonElement>(null);
+  const fromInput = useRef<HTMLInputElement>(null);
+
+  // A popover, not a panel: clicking anywhere else or pressing Escape dismisses it, the
+  // same way the console's menus behave.
+  useEffect(() => {
+    if (!customOpen) return;
+    function onPress(event: MouseEvent) {
+      const target = event.target as Node;
+      if (customPop.current?.contains(target) || customButton.current?.contains(target)) return;
+      setCustomOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setCustomOpen(false);
+        customButton.current?.focus();
+      }
+    }
+    document.addEventListener("mousedown", onPress);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPress);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [customOpen]);
+
+  useEffect(() => {
+    if (customOpen) fromInput.current?.focus();
+  }, [customOpen]);
 
   const custom = rangeId === "custom";
   const preset = PRESETS.find((r) => r.id === rangeId) ?? PRESETS[0];
@@ -82,6 +112,7 @@ export function Dashboard() {
     localStorage.setItem(`${RANGE_KEY}.from`, from);
     setRangeId("custom");
     setCustomOpen(false);
+    customButton.current?.focus();
   }
 
   const stats = useAsync(() => api<Stats>(`/admin/stats?window=${window}`), [window]);
@@ -213,65 +244,70 @@ export function Dashboard() {
     <>
       <div className="page-head">
         <h1>{custom ? label : `Last ${label}`}</h1>
-        <div className="range" role="group" aria-label="Time range">
-          {PRESETS.map((r) => (
+        <div className="range-wrap">
+          <div className="range" role="group" aria-label="Time range">
+            {PRESETS.map((r) => (
+              <button
+                key={r.id}
+                className={!custom && r.id === rangeId ? "on" : ""}
+                onClick={() => pick(r)}
+                aria-pressed={!custom && r.id === rangeId}
+              >
+                {r.label}
+              </button>
+            ))}
             <button
-              key={r.id}
-              className={!custom && r.id === rangeId ? "on" : ""}
-              onClick={() => pick(r)}
-              aria-pressed={!custom && r.id === rangeId}
+              ref={customButton}
+              className={custom ? "on" : ""}
+              onClick={() => setCustomOpen((open) => !open)}
+              aria-pressed={custom}
+              aria-expanded={customOpen}
+              aria-controls="custom-range"
             >
-              {r.label}
+              Custom
             </button>
-          ))}
-          <button
-            className={custom ? "on" : ""}
-            onClick={() => setCustomOpen((open) => !open)}
-            aria-pressed={custom}
-            aria-expanded={customOpen}
-          >
-            Custom
-          </button>
+          </div>
+
+          {customOpen ? (
+            <div
+              className="custom-pop"
+              id="custom-range"
+              role="group"
+              aria-label="Custom date range"
+              ref={customPop}
+            >
+              <label className="range-field">
+                <span>From</span>
+                <input
+                  ref={fromInput}
+                  type="date"
+                  value={from}
+                  max={to || undefined}
+                  onChange={(e) => setFrom(e.target.value)}
+                />
+              </label>
+              <label className="range-field">
+                <span>To</span>
+                <input
+                  type="date"
+                  value={to}
+                  min={from || undefined}
+                  max={isoDay(new Date())}
+                  onChange={(e) => setTo(e.target.value)}
+                />
+              </label>
+              <div className="range-row">
+                <span className="range-span" aria-live="polite">
+                  {validRange ? `${span} ${span === 1 ? "day" : "days"}` : "Pick both dates"}
+                </span>
+                <button className="primary" onClick={applyCustom} disabled={!validRange}>
+                  Apply
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
-
-      {customOpen ? (
-        <div className="custom-range" role="group" aria-label="Custom date range">
-          <label className="range-field">
-            <span>From</span>
-            <input
-              type="date"
-              value={from}
-              max={to || undefined}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </label>
-          <span className="range-sep" aria-hidden="true">→</span>
-          <label className="range-field">
-            <span>To</span>
-            <input
-              type="date"
-              value={to}
-              min={from || undefined}
-              max={isoDay(new Date())}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </label>
-          <span className="range-span" aria-live="polite">
-            {validRange ? `${span} ${span === 1 ? "day" : "days"}` : "Pick both dates"}
-          </span>
-          <button className="primary" onClick={applyCustom} disabled={!validRange}>
-            Apply
-          </button>
-          <button
-            className="icon-btn range-close"
-            aria-label="Close date range"
-            onClick={() => setCustomOpen(false)}
-          >
-            ✕
-          </button>
-        </div>
-      ) : null}
 
       <div className="stats">
         <Stat label="Requests" value={num(s.requests)} sub={`${num(s.total_tokens)} tokens`} />
