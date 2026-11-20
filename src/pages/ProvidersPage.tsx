@@ -3,12 +3,24 @@ import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
-import { Fields, toPayload, useForm, type FieldSpec } from "../components/form";
-import { Dialog, DialogActions, DialogSection, DialogSummary } from "../components/Dialog";
+import {
+  Fields,
+  focusFirstError,
+  toPayload,
+  useForm,
+  type FieldSpec,
+} from "../components/form";
+import { Dialog, DialogSection } from "../components/Dialog";
 import type { ProviderRow } from "../types";
 
 const IDENTITY: FieldSpec[] = [
-  { name: "slug", label: "Slug", required: true, placeholder: "openai", hint: "the name routes and alerts use" },
+  {
+    name: "slug",
+    label: "Slug",
+    required: true,
+    placeholder: "openai",
+    hint: "the name routes and alerts use",
+  },
   {
     name: "type",
     label: "Wire format",
@@ -19,33 +31,72 @@ const IDENTITY: FieldSpec[] = [
       { value: "gemini", label: "gemini — AI Studio native" },
       { value: "vertex", label: "vertex — Vertex AI native" },
     ],
+    hint: "picks the request/response shape",
   },
 ];
+
+/** base_url is wide (spans the row); the three timeouts fill one 3-track row. */
 const ENDPOINT: FieldSpec[] = [
   {
     name: "base_url",
     label: "Base URL",
     wide: true,
     placeholder: "https://api.openai.com/v1",
-    hint: "for VERTEX this may be left blank; it is derived from the location",
+    hint: "for vertex this may be left blank; it is derived from the location",
   },
-  { name: "api_version", label: "API version", hint: "Azure OpenAI only (deployment in the path)" },
-  { name: "request_timeout_ms", label: "Request timeout", type: "number", suffix: "ms" },
-  { name: "stream_idle_timeout_ms", label: "Stream idle timeout", type: "number", suffix: "ms" },
+  {
+    name: "api_version",
+    label: "API version",
+    placeholder: "2024-10-21",
+    hint: "Azure OpenAI only",
+  },
+  {
+    name: "request_timeout_ms",
+    label: "Request timeout",
+    type: "number",
+    inputMode: "numeric",
+    suffix: "ms",
+    placeholder: "60000",
+  },
+  {
+    name: "stream_idle_timeout_ms",
+    label: "Stream idle timeout",
+    type: "number",
+    inputMode: "numeric",
+    suffix: "ms",
+    placeholder: "30000",
+  },
 ];
+
 const VERTEX: FieldSpec[] = [
-  { name: "project", label: "GCP project", placeholder: "my-project", hint: "Vertex only" },
-  { name: "location", label: "Location", placeholder: "us-central1", hint: "Vertex only" },
+  {
+    name: "project",
+    label: "GCP project",
+    required: true,
+    placeholder: "my-project",
+    hint: "billing and quota owner",
+  },
+  {
+    name: "location",
+    label: "Location",
+    required: true,
+    placeholder: "us-central1",
+    hint: "also builds the base URL",
+  },
 ];
+
 const CREDENTIAL: FieldSpec[] = [
   {
     name: "api_key",
-    label: "Credential",
+    label: "API key or service-account JSON",
     type: "password",
     wide: true,
-    hint: "blank keeps the stored one; VERTEX takes the service-account JSON",
+    hint: "stored encrypted at rest",
+    autoComplete: "new-password",
   },
 ];
+
+/** Payload field list; the endpoint/vertex required flags are applied per type. */
 const FIELDS: FieldSpec[] = [...IDENTITY, ...ENDPOINT, ...VERTEX, ...CREDENTIAL];
 
 export function ProvidersPage() {
@@ -67,7 +118,36 @@ export function ProvidersPage() {
       ? Boolean(form.values.project?.trim() && form.values.location?.trim())
       : Boolean(form.values.base_url?.trim()));
 
+  /**
+   * Required state is derived from the current type, so switching away from
+   * vertex drops its required markers before a second submit can see them.
+   */
+  const identitySpec = IDENTITY;
+  const endpointSpec: FieldSpec[] = ENDPOINT.map((field) =>
+    field.name === "base_url" ? { ...field, required: !vertex } : field,
+  );
+  const vertexSpec = vertex ? VERTEX : [];
+  const credentialSpec: FieldSpec[] = CREDENTIAL.map((field) => ({
+    ...field,
+    hint: editing ? "blank keeps the stored credential" : field.hint,
+    placeholder: editing
+      ? "Leave blank to keep the stored credential"
+      : vertex
+        ? "{ service-account JSON }"
+        : "sk-…",
+  }));
+  const validateSpec: FieldSpec[] = [
+    ...identitySpec,
+    ...endpointSpec,
+    ...vertexSpec,
+    ...credentialSpec,
+  ];
+
   async function create() {
+    if (!form.validate(validateSpec)) {
+      focusFirstError();
+      return;
+    }
     form.setBusy(true);
     form.setError(null);
     try {
@@ -85,6 +165,10 @@ export function ProvidersPage() {
 
   async function update() {
     if (!editing) return;
+    if (!form.validate(validateSpec)) {
+      focusFirstError();
+      return;
+    }
     form.setBusy(true);
     form.setError(null);
     try {
@@ -141,61 +225,84 @@ export function ProvidersPage() {
   function providerSections() {
     return (
       <>
-        <DialogSection label="Identity">
-          <Fields spec={IDENTITY} form={form} />
+        <DialogSection label="Identity" note="how this upstream is referenced">
+          <Fields
+            spec={identitySpec}
+            form={form}
+            onChange={(name) => {
+              // A new wire format invalidates the previous type's required set.
+              if (name === "type") form.clearErrors();
+            }}
+          />
         </DialogSection>
-        <DialogSection label="Endpoint" note="VERTEX may derive it from the location">
-          <Fields spec={ENDPOINT} form={form} columns={3} />
+        <DialogSection
+          label="Endpoint"
+          note={vertex ? "derived from the location when blank" : undefined}
+        >
+          <Fields spec={endpointSpec} form={form} columns={3} />
         </DialogSection>
         {vertex ? (
           <DialogSection label="Vertex" note="required for this wire format">
-            <Fields spec={VERTEX} form={form} />
+            <Fields spec={vertexSpec} form={form} />
           </DialogSection>
         ) : null}
-        <DialogSection label="Credential" note="encrypted at rest">
-          <Fields spec={CREDENTIAL} form={form} />
+        <DialogSection
+          label="Credential"
+          note={editing ? "write-only — blank keeps the stored secret" : "encrypted at rest"}
+        >
+          <Fields spec={credentialSpec} form={form} />
         </DialogSection>
       </>
     );
   }
 
+  const target = vertex
+    ? `${form.values.location?.trim() || "location"} / ${form.values.project?.trim() || "project"}`
+    : form.values.base_url?.trim() || "base URL";
   const summary = ready
-    ? `${form.values.slug?.trim()} · ${type} → ${
-        vertex
-          ? `${form.values.location?.trim()} / ${form.values.project?.trim()}`
-          : form.values.base_url?.trim()
-      }`
-    : "A slug and an endpoint are required.";
+    ? `${form.values.slug?.trim()} · ${type} → ${target}`
+    : vertex
+      ? "A slug, location and project are required."
+      : "A slug and a base URL are required.";
 
-  function footer(busyLabel: string, label: string) {
+  function actions(busyLabel: string, label: string) {
     return (
       <>
-        <DialogSummary dim={!ready}>{summary}</DialogSummary>
-        {form.error ? <ErrorNote error={form.error} /> : null}
-        <DialogActions>
-          <button
-            type="button"
-            className="dlg-secondary"
-            onClick={() => {
-              setCreating(false);
-              setEditing(null);
-            }}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="dlg-primary" disabled={!ready || form.busy}>
-            {form.busy ? busyLabel : label}
-          </button>
-        </DialogActions>
+        <button
+          type="button"
+          className="dlg-secondary"
+          onClick={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+        >
+          Cancel
+        </button>
+        <button type="submit" className="dlg-primary" disabled={form.busy}>
+          {form.busy ? busyLabel : label}
+        </button>
       </>
     );
   }
 
   return (
     <>
-      <div className="page-head">
-        <h1>Providers</h1>
-        <button className="primary" onClick={() => { form.reset({ type: "openai" }); setCreating(true); }}>
+      <div className="page-head page-head-titled">
+        <div className="page-head-titles">
+          <h1>Providers</h1>
+          <p className="page-sub">
+            Upstream endpoints and the credentials used to reach them. Routes point at a
+            provider; the circuit state is per JVM.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            form.reset({ type: "openai" });
+            setCreating(true);
+          }}
+        >
           New provider
         </button>
       </div>
@@ -229,14 +336,28 @@ export function ProvidersPage() {
                   <td className="muted">{p.api_version ?? "—"}</td>
                   <td className="muted mono">{p.credential_hint ?? "—"}</td>
                   <td>
-                    <Badge tone={p.circuit_state === "open" ? "bad" : p.circuit_state === "half_open" ? "warn" : "good"}>
+                    <Badge
+                      tone={
+                        p.circuit_state === "open"
+                          ? "bad"
+                          : p.circuit_state === "half_open"
+                            ? "warn"
+                            : "good"
+                      }
+                    >
                       {p.circuit_state}
                     </Badge>
                   </td>
                   <td className="actions">
-                    <button className="ghost" onClick={() => startEdit(p)}>Edit</button>
-                    <button className="ghost" onClick={() => probe(p)}>Probe</button>
-                    <button className="danger" onClick={() => remove(p)}>Delete</button>
+                    <button type="button" className="ghost" onClick={() => startEdit(p)}>
+                      Edit
+                    </button>
+                    <button type="button" className="ghost" onClick={() => probe(p)}>
+                      Probe
+                    </button>
+                    <button type="button" className="danger" onClick={() => remove(p)}>
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -252,9 +373,12 @@ export function ProvidersPage() {
           onClose={() => setCreating(false)}
           onSubmit={(event) => {
             event.preventDefault();
-            create();
+            void create();
           }}
-          footer={footer("Creating…", "Create provider")}
+          summary={summary}
+          summaryDim={!ready}
+          error={form.error}
+          actions={actions("Creating…", "Create provider")}
         >
           {providerSections()}
         </Dialog>
@@ -263,13 +387,16 @@ export function ProvidersPage() {
       {editing ? (
         <Dialog
           title={`Edit ${editing.slug}`}
-          lede="Credentials are write-only; leaving the field blank keeps the stored one."
+          lede="Credentials are write-only; leaving the credential field blank keeps the stored secret. A blank endpoint field keeps the stored value."
           onClose={() => setEditing(null)}
           onSubmit={(event) => {
             event.preventDefault();
-            update();
+            void update();
           }}
-          footer={footer("Saving…", "Save changes")}
+          summary={summary}
+          summaryDim={!ready}
+          error={form.error}
+          actions={actions("Saving…", "Save changes")}
         >
           {providerSections()}
         </Dialog>

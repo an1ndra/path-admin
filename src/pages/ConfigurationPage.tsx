@@ -3,8 +3,14 @@ import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { Badge, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
-import { Fields, useForm, type FieldSpec } from "../components/form";
-import { Dialog, DialogActions, DialogSection, DialogSummary } from "../components/Dialog";
+import {
+  Fields,
+  focusFirstError,
+  useForm,
+  type Errors,
+  type FieldSpec,
+} from "../components/form";
+import { Dialog, DialogSection } from "../components/Dialog";
 import type { GatewaySettings } from "../types";
 
 interface MailSettings {
@@ -19,26 +25,72 @@ interface MailSettings {
   updated_at?: string | null;
 }
 
-const MAIL_SERVER: FieldSpec[] = [
-  { name: "host", label: "SMTP host", placeholder: "smtp.postmarkapp.com", wide: true },
-  { name: "port", label: "Port", type: "number", placeholder: "587" },
-  {
-    name: "username",
-    label: "Username",
-    placeholder: "API token or mailbox user",
-  },
-  {
-    name: "password",
-    label: "Password",
-    type: "password",
-    hint: "blank keeps the stored one; - clears it",
-  },
+/** Payload fields. Names and types are the API contract; only the copy changes. */
+const MAIL_SPEC: FieldSpec[] = [
+  { name: "host", label: "SMTP host", wide: true },
+  { name: "port", label: "Port", type: "number" },
+  { name: "username", label: "Username" },
+  { name: "password", label: "Password", type: "password" },
+  { name: "from", label: "From address", type: "email" },
+  { name: "to", label: "Recipients" },
 ];
-const MAIL_DELIVERY: FieldSpec[] = [
-  { name: "from", label: "From address", wide: true, placeholder: "path@example.com" },
-  { name: "to", label: "Recipients", wide: true, hint: "comma separated" },
-];
-const MAIL_SPEC: FieldSpec[] = [...MAIL_SERVER, ...MAIL_DELIVERY];
+
+/** What the form shows: same field names, with the stored value in each hint. */
+function mailSections(current: MailSettings | null | undefined): {
+  server: FieldSpec[];
+  delivery: FieldSpec[];
+} {
+  const server: FieldSpec[] = [
+    {
+      name: "host",
+      label: "SMTP host",
+      wide: true,
+      required: !current?.host,
+      placeholder: "smtp.postmarkapp.com",
+      hint: current?.host ? `stored: ${current.host}` : "not set yet",
+    },
+    {
+      name: "port",
+      label: "Port",
+      type: "number",
+      inputMode: "numeric",
+      placeholder: "587",
+      hint: current?.port ? `stored: ${current.port}` : "blank uses 587",
+    },
+    {
+      name: "username",
+      label: "Username",
+      placeholder: "API token or mailbox user",
+      hint: current?.username ? `stored: ${current.username}` : "optional",
+    },
+    {
+      name: "password",
+      label: "Password",
+      type: "password",
+      autoComplete: "new-password",
+      placeholder: current?.has_password ? "stored — leave blank to keep" : "not set",
+      hint: "blank keeps it; - clears it",
+    },
+  ];
+  const delivery: FieldSpec[] = [
+    {
+      name: "from",
+      label: "From address",
+      type: "email",
+      placeholder: "path@example.com",
+      hint: current?.from ? `stored: ${current.from}` : "sender shown in the inbox",
+    },
+    {
+      name: "to",
+      label: "Recipients",
+      inputMode: "email",
+      required: !current?.to,
+      placeholder: "ops@example.com",
+      hint: "comma separated addresses",
+    },
+  ];
+  return { server, delivery };
+}
 
 /** Gateway switches and delivery. Account and token live on Settings. */
 export function ConfigurationPage() {
@@ -50,7 +102,31 @@ export function ConfigurationPage() {
   const [digest, setDigest] = useState<{ subject?: string; text?: string; reason?: string } | null>(null);
   const [mailOpen, setMailOpen] = useState(false);
 
-  async function saveMail() {
+  const currentMail = mail.data;
+  const gw = settings.data;
+
+  async function saveMail(): Promise<boolean> {
+    const { server, delivery } = mailSections(currentMail);
+    const valid = form.validate([...server, ...delivery], (values): Errors => {
+      const errors: Errors = {};
+      if (!(values.host?.trim() || currentMail?.host)) {
+        errors.host = "A host is required.";
+      }
+      if (!(values.to?.trim() || currentMail?.to)) {
+        errors.to = "At least one recipient is required.";
+      }
+      const port = (values.port ?? "").trim();
+      if (port !== "") {
+        const n = Number(port);
+        if (!Number.isFinite(n) || n < 1 || n > 65535) errors.port = "Use a port from 1 to 65535.";
+      }
+      return errors;
+    });
+    if (!valid) {
+      focusFirstError();
+      return false;
+    }
+
     form.setBusy(true);
     form.setError(null);
     setNote(null);
@@ -131,12 +207,42 @@ export function ConfigurationPage() {
     }
   }
 
-  const currentMail = mail.data;
-  const gw = settings.data;
+  const { server: mailServer, delivery: mailDelivery } = mailSections(currentMail);
+
+  const effHost = form.values.host?.trim() || currentMail?.host || "";
+  const effPort = form.values.port?.trim() || String(currentMail?.port ?? 587);
+  const effTo = form.values.to?.trim() || currentMail?.to || "";
+  // A field counts as new only when it differs from what is actually stored;
+  // the password is write-only, so any value typed there replaces the secret.
+  const differs = (name: string, stored: string | number | null | undefined) => {
+    const value = (form.values[name] ?? "").trim();
+    return value !== "" && value !== String(stored ?? "");
+  };
+  const changed =
+    differs("host", currentMail?.host) ||
+    differs("port", currentMail?.port) ||
+    differs("username", currentMail?.username) ||
+    differs("from", currentMail?.from) ||
+    differs("to", currentMail?.to) ||
+    (form.values.password ?? "").trim() !== "";
+  const mailSummary = (
+    <>
+      <span className={`dlg-flag${changed ? "" : " quiet"}`}>{changed ? "new" : "current"}</span>
+      {`${effHost || "smtp host"}:${effPort} → ${effTo || "no recipients"}`}
+    </>
+  );
 
   return (
     <>
-      <h1>Configuration</h1>
+      <header className="page-head page-head-titled">
+        <div className="page-head-titles">
+          <h1>Configuration</h1>
+          <p className="page-sub">
+            Gateway switches, alert delivery and the daily digest. Everything except email is
+            set by environment and shown read-only.
+          </p>
+        </div>
+      </header>
       {note ? <p className="note">{note}</p> : null}
 
       <Panel title="Gateway" hint={gw?.auth_mode === "proxy" ? "SSO proxy" : "token auth"}>
@@ -234,14 +340,21 @@ export function ConfigurationPage() {
 
             <div className="modal-actions">
               {currentMail?.configured ? (
-                <button className="ghost" onClick={disableMail}>
+                <button type="button" className="ghost" onClick={disableMail}>
                   Disable
                 </button>
               ) : null}
-              <button className="ghost" disabled={busy} onClick={testAlert}>
+              <button type="button" className="ghost" disabled={busy} onClick={testAlert}>
                 Send test alert
               </button>
-              <button className="primary" onClick={() => setMailOpen(true)}>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => {
+                  form.reset({});
+                  setMailOpen(true);
+                }}
+              >
                 {currentMail?.configured ? "Edit email" : "Configure email"}
               </button>
             </div>
@@ -260,7 +373,7 @@ export function ConfigurationPage() {
             model. It reuses the alert mailbox above and sends nothing for an empty day.
           </p>
           <div className="modal-actions">
-            <button className="ghost" disabled={busy} onClick={testDigest}>
+            <button type="button" className="ghost" disabled={busy} onClick={testDigest}>
               {busy ? "Working…" : "Render yesterday's digest"}
             </button>
           </div>
@@ -273,38 +386,49 @@ export function ConfigurationPage() {
       {mailOpen ? (
         <Dialog
           title={currentMail?.configured ? "Alert email" : "Configure alert email"}
-          lede="Alerts are sent through this SMTP server. The password is encrypted and write-only; a blank field keeps the stored one."
+          lede="Alerts are sent through this SMTP server. Blank fields keep the stored value; the password is write-only, and a single '-' clears it."
           onClose={() => setMailOpen(false)}
           onSubmit={(event) => {
             event.preventDefault();
-            saveMail();
+            void saveMail();
           }}
-          footer={
+          summary={mailSummary}
+          summaryDim={!effHost || !effTo}
+          error={form.error}
+          actions={
             <>
-              <DialogSummary
-                dim={!((form.values.host?.trim() || currentMail?.host) && (form.values.to?.trim() || currentMail?.to))}
-              >
-                {`${form.values.host?.trim() || currentMail?.host || "smtp host"}:${
-                  form.values.port || currentMail?.port || 587
-                } → ${form.values.to?.trim() || currentMail?.to || "no recipients"}`}
-              </DialogSummary>
-              {form.error ? <ErrorNote error={form.error} /> : null}
-              <DialogActions>
-                <button type="button" className="dlg-secondary" onClick={() => setMailOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="dlg-primary" disabled={form.busy}>
-                  {form.busy ? "Saving…" : "Save"}
-                </button>
-              </DialogActions>
+              <button type="button" className="dlg-secondary" onClick={() => setMailOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="dlg-primary" disabled={form.busy}>
+                {form.busy ? "Saving…" : "Save"}
+              </button>
             </>
           }
         >
-          <DialogSection label="SMTP server">
-            <Fields spec={MAIL_SERVER} form={form} columns={3} />
+          <DialogSection
+            label="SMTP server"
+            note={currentMail?.configured ? "saved values shown below" : "not configured yet"}
+          >
+            <div className="dlg-current">
+              <strong>Stored</strong>
+              {currentMail?.configured ? (
+                <>
+                  <span className="mono">
+                    {currentMail.host}:{currentMail.port ?? 587}
+                  </span>
+                  <span>→ {currentMail.to}</span>
+                  <span>· password {currentMail.has_password ? "stored" : "not set"}</span>
+                  {currentMail.username ? <span>· user {currentMail.username}</span> : null}
+                </>
+              ) : (
+                <span>Nothing stored yet — fill the host and recipients to enable alerting.</span>
+              )}
+            </div>
+            <Fields spec={mailServer} form={form} columns={3} />
           </DialogSection>
-          <DialogSection label="Delivery">
-            <Fields spec={MAIL_DELIVERY} form={form} />
+          <DialogSection label="Delivery" note="where budget and circuit alerts land">
+            <Fields spec={mailDelivery} form={form} />
           </DialogSection>
         </Dialog>
       ) : null}

@@ -1,0 +1,636 @@
+/* Dashboard-only layer.
+   Every rule is scoped under .dashboard-* or .dash-* so nothing here leaks into the
+   other pages. Design tokens come from styles.css; only spacing, hierarchy and the
+   chart/layout internals are defined here. */
+
+/* --- page head + range controls --------------------------------------- */
+
+.dashboard-head {
+  gap: 12px 20px;
+  flex-wrap: wrap;
+}
+
+.dashboard-head h1 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.dashboard-head .range-wrap {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Doubled class names keep these rules winning regardless of the order Vite puts the
+   two stylesheets in: styles.css already styles .range and .custom-pop. */
+.range.dashboard-range {
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  background: #0d121c;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.range.dashboard-range button {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 11px;
+  color: var(--muted);
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 0.12s, color 0.12s;
+}
+
+.range.dashboard-range button:hover {
+  background: #1b2230;
+  color: var(--text);
+}
+
+.range.dashboard-range button.on {
+  color: #d6e8ff;
+  background: #4da3ff1f;
+  box-shadow: inset 0 0 0 1px #4da3ff66;
+}
+
+.range.dashboard-range button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Keep the popover compact, but give the fields a consistent rhythm and the
+   Apply row its own edge so it does not read as a third form field. */
+.custom-pop.dashboard-pop {
+  width: 272px;
+  gap: 12px;
+  padding: 14px;
+}
+
+.custom-pop.dashboard-pop .range-field {
+  gap: 6px;
+}
+
+.custom-pop.dashboard-pop .range-field > span {
+  color: #75839a;
+  letter-spacing: 0.07em;
+}
+
+.custom-pop.dashboard-pop input {
+  height: 36px;
+}
+
+.custom-pop.dashboard-pop .range-row {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.custom-pop.dashboard-pop .range-span {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+/* --- KPI cards --------------------------------------------------------- */
+
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 196px), 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.dashboard-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px 13px;
+  background: linear-gradient(180deg, #141a26 0%, var(--panel) 58%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 #ffffff05;
+}
+
+.dashboard-kpi.is-warn {
+  border-color: #d2992244;
+}
+
+.dashboard-kpi.is-warn .dashboard-kpi-label {
+  color: #e3b341;
+}
+
+.dashboard-kpi-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.dashboard-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dashboard-kpi-hint {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: #75839a;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dashboard-kpi-hint.is-good {
+  color: #7ee787;
+  border-color: #2ea04344;
+  background: #2ea04310;
+}
+
+.dashboard-kpi-hint.is-warn {
+  color: #e3b341;
+  border-color: #d2992255;
+  background: #d2992210;
+}
+
+.dashboard-kpi-value {
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-kpi-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #1a2130;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.dashboard-kpi-foot > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-kpi-foot > span + span::before {
+  content: "·";
+  margin-right: 8px;
+  color: #3c4a60;
+}
+
+.dashboard-meter {
+  display: block;
+  height: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #0b0e14;
+  overflow: hidden;
+}
+
+.dashboard-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f6ea8, var(--accent));
+}
+
+.dashboard-note {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.dashboard-placeholder {
+  animation: dash-breathe 1.8s ease-in-out infinite;
+}
+
+/* Panel headers are shared with every page; on a phone the title and hint need to
+   stack instead of squeezing each other. */
+.dashboard .panel > header {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+@media (max-width: 560px) {
+  .dashboard .panel > header {
+    padding: 10px 14px;
+  }
+  .dashboard .panel > header h2 {
+    font-size: 12px;
+  }
+  .dashboard .panel > header .hint {
+    font-size: 11px;
+  }
+}
+
+/* --- bars over time ---------------------------------------------------- */
+
+.dash-chart {
+  padding: 14px 16px 12px;
+}
+
+.dash-chart-plot {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dash-chart-y {
+  position: relative;
+  flex: none;
+  width: 38px;
+}
+
+.dash-chart-y span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  color: #6b788c;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dash-chart-area {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dash-chart-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.dash-chart-grid span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed #222b3b;
+}
+
+.dash-chart-grid span.is-base {
+  border-top: 1px solid #2c3648;
+}
+
+.dash-chart-bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 100%;
+}
+
+.dash-bar-slot {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 3px 3px 0 0;
+}
+
+.dash-bar-slot:hover {
+  background: #ffffff08;
+}
+
+.dash-bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #3a6fa3, #2a4c72);
+  transition: background 0.12s;
+}
+
+.dash-bar-slot:hover .dash-bar {
+  background: var(--accent);
+}
+
+.dash-bar.is-peak {
+  background: linear-gradient(180deg, #66b6ff, #2f74b8);
+}
+
+.dash-chart-x {
+  position: relative;
+  height: 16px;
+  margin: 8px 0 0 48px;
+}
+
+.dash-chart-x-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  color: #6b788c;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dash-chart-x-label.is-first {
+  transform: none;
+}
+
+.dash-chart-x-label.is-last {
+  transform: translateX(-100%);
+}
+
+.dash-chart-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #1a2130;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.dash-chart-foot b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dash-chart-note {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border: 1px dashed #2a3446;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.dash-chart-empty .dash-chart-area {
+  display: grid;
+  place-items: center;
+}
+
+.dash-chart-empty-msg {
+  position: relative;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* --- sparkline in the requests card ------------------------------------ */
+
+.dash-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  margin-top: 2px;
+}
+
+.dash-spark-bar {
+  flex: 1 1 0;
+  min-width: 1px;
+  border-radius: 1px;
+  background: #2f5d8a;
+  opacity: 0.9;
+}
+
+.dash-spark-bar.is-latest {
+  background: var(--accent);
+  opacity: 1;
+}
+
+/* --- ranked lists ------------------------------------------------------ */
+
+.dash-rank {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 16px 14px;
+}
+
+.dash-rank-row {
+  display: grid;
+  grid-template-columns: minmax(0, 42%) minmax(48px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.dash-rank-label {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-rank-track {
+  height: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #0b0e14;
+  overflow: hidden;
+}
+
+.dash-rank-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f5d8a, var(--accent));
+}
+
+.dash-rank-value {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* --- loading skeleton -------------------------------------------------- */
+
+.dashboard-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dashboard-sk {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #151c28 25%, #1d2635 37%, #151c28 63%);
+  background-size: 400% 100%;
+  animation: dash-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes dash-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes dash-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.dashboard-sk-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.dashboard-sk-title {
+  width: 178px;
+  height: 24px;
+}
+
+.dashboard-sk-pill {
+  width: 268px;
+  height: 34px;
+  max-width: 100%;
+  border-radius: 999px;
+}
+
+.dashboard-sk-label {
+  width: 56%;
+  height: 10px;
+}
+
+.dashboard-sk-value {
+  width: 68%;
+  height: 26px;
+  margin: 2px 0;
+}
+
+.dashboard-sk-line {
+  width: 100%;
+  height: 10px;
+}
+
+.dashboard-sk-foot {
+  width: 86%;
+  height: 10px;
+}
+
+.dashboard-sk-panel {
+  height: 236px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(90deg, #10161f 25%, #151d29 37%, #10161f 63%);
+  background-size: 400% 100%;
+  animation: dash-shimmer 1.4s ease-in-out infinite;
+}
+
+.dashboard-sk-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.dashboard-sk-panel.is-short {
+  height: 190px;
+  margin-bottom: 0;
+}
+
+/* --- responsive -------------------------------------------------------- */
+
+@media (max-width: 940px) {
+  .dashboard-head h1 {
+    font-size: 18px;
+  }
+  .dashboard-kpi-value {
+    font-size: 24px;
+  }
+  .dashboard-sk-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboard-head .range-wrap {
+    width: 100%;
+    margin-left: 0;
+  }
+  /* Keep five labels only while there is room for them. */
+  .dash-chart-x-label:nth-child(2),
+  .dash-chart-x-label:nth-child(4) {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard-kpi {
+    padding: 12px 13px;
+  }
+  /* Five cards over two columns: let the last one use the free space. */
+  .dashboard-kpi:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .dashboard-kpi-value {
+    font-size: 22px;
+  }
+  .range.dashboard-range {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .range.dashboard-range button {
+    flex: 1 1 auto;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .custom-pop.dashboard-pop {
+    width: 100%;
+    left: 0;
+    right: auto;
+  }
+  .dash-chart-y {
+    width: 30px;
+  }
+  .dash-chart-x {
+    margin-left: 40px;
+  }
+  .dash-chart-foot {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-sk,
+  .dashboard-sk-panel,
+  .dashboard-placeholder {
+    animation: none;
+  }
+}

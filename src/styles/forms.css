@@ -1,0 +1,141 @@
+/* Form ergonomics inside the shared dialog.
+   Every rule is scoped under `.dialog`, so none of this reaches the console
+   outside a dialog. Tokens (--d-*) come from the dialog shell in styles.css. */
+
+/* Labels are associated with their control (htmlFor/id), unlike the plain
+   wrapper labels used by the older panels. */
+.dialog .field > label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--d-muted);
+}
+.dialog .field > label em {
+  color: var(--d-required);
+  font-style: normal;
+}
+
+/* Hints and errors share one fixed-height, single-line slot. A field therefore
+   keeps the same row height whether it shows a hint, an error, or nothing. */
+.dialog .field > small,
+.dialog .dlg-field > small {
+  display: block;
+  min-height: 14px;
+  max-height: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 14px;
+  font-size: 10.5px;
+  color: var(--d-faint);
+}
+.dialog .field > small.fld-error,
+.dialog .dlg-field > small.fld-error {
+  color: var(--d-required);
+}
+
+/* Invalid styling also covers the `.field` controls, not just `.dlg-input`. */
+.dialog .field input[aria-invalid="true"],
+.dialog .field select[aria-invalid="true"] {
+  border-color: var(--d-required);
+}
+.dialog .field input[aria-invalid="true"]:focus-visible,
+.dialog .field select[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 3px #f9706633;
+}
+
+/* The footer status strip is both the live summary and the server-error slot:
+   an error replaces the summary inside the same 34px row, so the footer and
+   its buttons never move. */
+.dialog .dlg-summary.is-error {
+  gap: 8px;
+  color: #ffb4ab;
+  border-color: #f9706655;
+  background: #f9706610;
+}
+.dialog .dlg-summary .dlg-status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialog .dlg-summary .dlg-status-flag {
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--d-required);
+}
+.dialog .dlg-summary.is-error .dlg-status-text {
+  color: #ffb4ab;
+}
+
+/* Current-versus-new readout, used where a dialog edits stored settings. */
+.dialog .dlg-current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+  padding: 8px 11px;
+  border: 1px dashed var(--d-border);
+  border-radius: 6px;
+  background: var(--d-input);
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--d-muted);
+}
+.dialog .dlg-current > strong {
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--d-faint);
+}
+.dialog .dlg-current .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--d-text);
+}
+
+/* A quiet inline note for "blank keeps the stored value" style copy. */
+.dialog .dlg-inline-note {
+  margin: 0 0 12px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--d-faint);
+}
+.dialog .dlg-inline-note b {
+  font-weight: 600;
+  color: var(--d-muted);
+}
+
+/* Value-change marker inside the summary, e.g. "new" versus "current". */
+.dialog .dlg-flag {
+  flex: none;
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border: 1px solid #3d82f659;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #8db6ff;
+}
+.dialog .dlg-flag.quiet {
+  border-color: var(--d-border);
+  color: var(--d-faint);
+}
+
+@media (max-width: 640px) {
+  /* The status strip grows to fit its text on a phone; keep the description
+     readable instead of clipping it to one line. */
+  .dialog .dlg-summary .dlg-status-text {
+    white-space: normal;
+  }
+}

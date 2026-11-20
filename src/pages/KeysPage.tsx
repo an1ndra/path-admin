@@ -4,12 +4,25 @@ import { useAsync } from "../useAsync";
 import { usd, when } from "../format";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
-import { Fields, toPayload, useForm, type FieldSpec } from "../components/form";
-import { Dialog, DialogActions, DialogSection, DialogSummary } from "../components/Dialog";
+import {
+  Fields,
+  focusFirstError,
+  toPayload,
+  useForm,
+  type FieldSpec,
+} from "../components/form";
+import { Dialog, DialogSection } from "../components/Dialog";
 import type { KeyRow } from "../types";
 
 const IDENTITY: FieldSpec[] = [
-  { name: "name", label: "Name", required: true, wide: true, placeholder: "checkout-service" },
+  {
+    name: "name",
+    label: "Name",
+    required: true,
+    wide: true,
+    placeholder: "checkout-service",
+    hint: "shown in usage and budget alerts",
+  },
   {
     name: "allowed_models",
     label: "Allowed models",
@@ -18,18 +31,73 @@ const IDENTITY: FieldSpec[] = [
     hint: "comma separated ids, aliases or globs — blank allows every model",
   },
 ];
-const SPEND: FieldSpec[] = [
-  { name: "credit_limit_usd", label: "Credit limit", type: "number", suffix: "USD", hint: "blank = unlimited" },
-  { name: "daily_limit_usd", label: "Daily limit", type: "number", suffix: "USD" },
-  { name: "monthly_limit_usd", label: "Monthly limit", type: "number", suffix: "USD" },
-  { name: "end_user_daily_limit_usd", label: "Per end user / day", type: "number", suffix: "USD" },
+
+/** Money caps. Two tracks, four fields: two full rows, no orphan cell. */
+const BUDGETS: FieldSpec[] = [
+  {
+    name: "credit_limit_usd",
+    label: "Total credit limit",
+    type: "number",
+    suffix: "USD",
+    placeholder: "unlimited",
+    hint: "lifetime spend cap for this key",
+  },
+  {
+    name: "daily_limit_usd",
+    label: "Daily spend limit",
+    type: "number",
+    suffix: "USD",
+    placeholder: "unlimited",
+    hint: "resets every 24 hours",
+  },
+  {
+    name: "monthly_limit_usd",
+    label: "Monthly spend limit",
+    type: "number",
+    suffix: "USD",
+    placeholder: "unlimited",
+    hint: "resets on the 1st",
+  },
+  {
+    name: "end_user_daily_limit_usd",
+    label: "Per end user, per day",
+    type: "number",
+    suffix: "USD",
+    placeholder: "unlimited",
+    hint: "requires an end-user id on requests",
+  },
 ];
+
+/** Three tracks, three fields: exactly one row. */
 const LIMITS: FieldSpec[] = [
-  { name: "rpm_limit", label: "Requests / minute", type: "number", hint: "defaults to the gateway value" },
-  { name: "max_concurrent_requests", label: "Max concurrent", type: "number" },
-  { name: "max_output_tokens", label: "Max output tokens", type: "number", suffix: "tokens", hint: "clamps max_tokens" },
+  {
+    name: "rpm_limit",
+    label: "Requests per minute",
+    type: "number",
+    inputMode: "numeric",
+    placeholder: "gateway default",
+    hint: "blank uses the gateway value",
+  },
+  {
+    name: "max_concurrent_requests",
+    label: "Concurrent requests",
+    type: "number",
+    inputMode: "numeric",
+    placeholder: "no cap",
+    hint: "in flight at once",
+  },
+  {
+    name: "max_output_tokens",
+    label: "Max output tokens",
+    type: "number",
+    inputMode: "numeric",
+    suffix: "tokens",
+    placeholder: "no cap",
+    hint: "clamps max_tokens",
+  },
 ];
-const SPEC: FieldSpec[] = [...IDENTITY, ...SPEND, ...LIMITS];
+
+const SPEC: FieldSpec[] = [...IDENTITY, ...BUDGETS, ...LIMITS];
 
 export function KeysPage() {
   const keys = useAsync(() => api<KeyRow[]>("/admin/keys"), []);
@@ -37,10 +105,17 @@ export function KeysPage() {
   const [creating, setCreating] = useState(false);
   const [topUp, setTopUp] = useState<KeyRow | null>(null);
   const [amount, setAmount] = useState("10");
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [topUpError, setTopUpError] = useState<unknown>(null);
   const [note, setNote] = useState<string | null>(null);
   const [issued, setIssued] = useState<string | null>(null);
 
   async function create() {
+    if (!form.validate(SPEC)) {
+      focusFirstError();
+      return;
+    }
+
     form.setBusy(true);
     form.setError(null);
     try {
@@ -58,15 +133,30 @@ export function KeysPage() {
     }
   }
 
+  function openTopUp(row: KeyRow) {
+    setTopUp(row);
+    setAmount("10");
+    setAmountError(null);
+    setTopUpError(null);
+  }
+
   async function topUpKey() {
     if (!topUp) return;
+    const value = Number(amount.trim());
+    if (amount.trim() === "" || !Number.isFinite(value) || value <= 0) {
+      setAmountError("Enter an amount greater than zero.");
+      focusFirstError();
+      return;
+    }
+
+    setTopUpError(null);
     try {
       await send("POST", `/admin/keys/${topUp.id}/topup`, { amount_usd: Number(amount) });
-      setNote(`Topped up ${topUp.name} by $${amount}.`);
+      setNote(`Topped up ${topUp.name} by ${usd(Number(amount))}.`);
       setTopUp(null);
       await keys.reload();
     } catch (e) {
-      setNote(e instanceof Error ? e.message : "Top-up failed");
+      setTopUpError(e);
     }
   }
 
@@ -81,11 +171,44 @@ export function KeysPage() {
     }
   }
 
+  const keyName = form.values.name?.trim() ?? "";
+  const credit = form.values.credit_limit_usd?.trim() ?? "";
+  const rpm = form.values.rpm_limit?.trim() ?? "";
+  const keySummary = keyName
+    ? `${keyName} · ${credit ? `${usd(Number(credit))} credit cap` : "no credit cap"}${
+        rpm ? ` · ${rpm} requests/min` : ""
+      }${form.values.allowed_models?.trim() ? " · model allowlist" : ""}`
+    : "Name the key to create it.";
+
+  const topUpAmount = Number(amount.trim());
+  const topUpValid = amount.trim() !== "" && Number.isFinite(topUpAmount) && topUpAmount > 0;
+  const topUpSummary = topUp
+    ? topUpValid
+      ? `+${usd(topUpAmount)} → ${topUp.name}${
+          topUp.credit_limit_usd != null ? ` · credit cap ${usd(topUp.credit_limit_usd)}` : " · no credit cap"
+        }`
+      : "Enter the credit to add."
+    : "";
+
   return (
     <>
-      <div className="page-head">
-        <h1>Keys</h1>
-        <button className="primary" onClick={() => { form.reset({}); setIssued(null); setCreating(true); }}>
+      <div className="page-head page-head-titled">
+        <div className="page-head-titles">
+          <h1>Client keys</h1>
+          <p className="page-sub">
+            What applications authenticate with. Each key carries its own budgets, rate limits
+            and model allowlist, in addition to its project's caps.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            form.reset({});
+            setIssued(null);
+            setCreating(true);
+          }}
+        >
           New key
         </button>
       </div>
@@ -93,7 +216,7 @@ export function KeysPage() {
       {issued ? (
         <p className="note mono">
           {issued}{" "}
-          <button className="ghost" onClick={() => navigator.clipboard.writeText(issued)}>
+          <button type="button" className="ghost" onClick={() => navigator.clipboard.writeText(issued)}>
             Copy
           </button>
         </p>
@@ -132,11 +255,17 @@ export function KeysPage() {
                   <td className="right">{usd(k.end_user_daily_limit_usd)}</td>
                   <td className="right">{k.rpm_limit ?? "—"}</td>
                   <td className="muted">{when(k.last_used_at)}</td>
-                  <td><Badge tone={k.enabled ? "good" : "neutral"}>{k.enabled ? "active" : "revoked"}</Badge></td>
+                  <td>
+                    <Badge tone={k.enabled ? "good" : "neutral"}>{k.enabled ? "active" : "revoked"}</Badge>
+                  </td>
                   <td className="actions">
-                    <button className="ghost" onClick={() => { setTopUp(k); setAmount("10"); }}>Top up</button>
+                    <button type="button" className="ghost" onClick={() => openTopUp(k)}>
+                      Top up
+                    </button>
                     {k.enabled ? (
-                      <button className="danger" onClick={() => revoke(k)}>Revoke</button>
+                      <button type="button" className="danger" onClick={() => revoke(k)}>
+                        Revoke
+                      </button>
                     ) : null}
                   </td>
                 </tr>
@@ -149,42 +278,31 @@ export function KeysPage() {
       {creating ? (
         <Dialog
           title="New client key"
-          lede="The key is shown once after creation. Budgets and limits are optional; a blank limit means no cap, and per-key limits apply in addition to the project's."
+          lede="Shown once after creation. Budgets and limits are optional; per-key limits apply in addition to the project's."
           onClose={() => setCreating(false)}
           onSubmit={(event) => {
             event.preventDefault();
-            create();
+            void create();
           }}
-          footer={
+          summary={keySummary}
+          summaryDim={!keyName}
+          error={form.error}
+          actions={
             <>
-              <DialogSummary dim={!form.values.name?.trim()}>
-                {form.values.name?.trim()
-                  ? `${form.values.name.trim()}${
-                      form.values.credit_limit_usd ? ` · $${form.values.credit_limit_usd} credit` : ""
-                    }${form.values.rpm_limit ? ` · ${form.values.rpm_limit} rpm` : ""}`
-                  : "Name the key to create it."}
-              </DialogSummary>
-              {form.error ? <ErrorNote error={form.error} /> : null}
-              <DialogActions>
-                <button type="button" className="dlg-secondary" onClick={() => setCreating(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="dlg-primary"
-                  disabled={form.busy || !form.values.name?.trim()}
-                >
-                  {form.busy ? "Creating…" : "Create key"}
-                </button>
-              </DialogActions>
+              <button type="button" className="dlg-secondary" onClick={() => setCreating(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="dlg-primary" disabled={form.busy}>
+                {form.busy ? "Creating…" : "Create key"}
+              </button>
             </>
           }
         >
           <DialogSection label="Identity">
             <Fields spec={IDENTITY} form={form} />
           </DialogSection>
-          <DialogSection label="Spend" note="blank means no cap">
-            <Fields spec={SPEND} form={form} />
+          <DialogSection label="Budget caps" note="blank means no cap">
+            <Fields spec={BUDGETS} form={form} />
           </DialogSection>
           <DialogSection label="Rate and size limits">
             <Fields spec={LIMITS} form={form} columns={3} />
@@ -199,34 +317,55 @@ export function KeysPage() {
           onClose={() => setTopUp(null)}
           onSubmit={(event) => {
             event.preventDefault();
-            topUpKey();
+            void topUpKey();
           }}
-          footer={
+          summary={topUpSummary}
+          summaryDim={!topUpValid}
+          error={topUpError}
+          actions={
             <>
-              <DialogSummary dim={!amount.trim()}>
-                {amount.trim() ? `+$${amount} to ${topUp.name}` : "Enter an amount."}
-              </DialogSummary>
-              <DialogActions>
-                <button type="button" className="dlg-secondary" onClick={() => setTopUp(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="dlg-primary" disabled={!amount.trim()}>
-                  Add credit
-                </button>
-              </DialogActions>
+              <button type="button" className="dlg-secondary" onClick={() => setTopUp(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="dlg-primary">
+                Add credit
+              </button>
             </>
           }
         >
-          <DialogSection label="Amount">
-            <label className="field">
-              <span>Amount (USD)</span>
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                inputMode="decimal"
-                aria-label="Amount in US dollars"
-              />
-            </label>
+          <DialogSection label="Amount" note={`current credit cap ${usd(topUp.credit_limit_usd)}`}>
+            <div className="dlg-field">
+              <label htmlFor="topup-amount">
+                Amount to add <em>*</em>
+              </label>
+              <span className="dlg-number">
+                <input
+                  id="topup-amount"
+                  className="dlg-input"
+                  inputMode="decimal"
+                  value={amount}
+                  placeholder="10.00"
+                  aria-invalid={amountError ? true : undefined}
+                  aria-describedby={amountError ? "topup-amount-error" : "topup-amount-hint"}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    if (amountError) setAmountError(null);
+                    if (topUpError) setTopUpError(null);
+                  }}
+                  autoComplete="off"
+                />
+                <span className="suffix" aria-hidden="true">
+                  USD
+                </span>
+              </span>
+              {amountError ? (
+                <small className="fld-error" id="topup-amount-error" role="alert">
+                  {amountError}
+                </small>
+              ) : (
+                <small id="topup-amount-hint">added to the key's available credit</small>
+              )}
+            </div>
           </DialogSection>
         </Dialog>
       ) : null}

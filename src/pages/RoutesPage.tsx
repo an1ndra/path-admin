@@ -34,48 +34,103 @@ export function RoutesPage() {
     }
   }
 
+  const rows = routes.data ?? [];
+  const loaded = !routes.loading && !routes.error;
+
   return (
     <>
-      <div className="page-head">
-        <h1>Routes</h1>
-        <button className="primary" onClick={() => setCreating(true)}>
+      <header className="page-head page-head-titled page-head-routes">
+        <div className="page-head-titles">
+          <h1>Routes</h1>
+          <p className="page-sub">
+            A route maps a public model name to one upstream provider, with its own price,
+            cache and failover strategy. Disable a route to pull it from traffic without deleting it.
+          </p>
+        </div>
+        <button type="button" className="primary" onClick={() => setCreating(true)}>
           Add model
         </button>
-      </div>
-      {note ? <p className="note">{note}</p> : null}
-      <Panel title="Model routing" hint="EWMA is per JVM">
+      </header>
+
+      {note ? (
+        <p className="note page-note" role="status">
+          {note}
+        </p>
+      ) : null}
+
+      <Panel
+        title="Model routing"
+        hint="EWMA is per JVM"
+        actions={
+          loaded ? (
+            <span className="page-count" aria-live="polite">
+              {rows.length} {rows.length === 1 ? "route" : "routes"}
+            </span>
+          ) : null
+        }
+      >
         {routes.loading ? (
-          <Loading />
+          <Loading label="Loading routes…" />
         ) : routes.error ? (
           <ErrorNote error={routes.error} />
-        ) : (routes.data ?? []).length === 0 ? (
-          <Empty>No routes yet.</Empty>
+        ) : rows.length === 0 ? (
+          <Empty
+            title="No routes yet"
+            action={
+              <button type="button" className="primary" onClick={() => setCreating(true)}>
+                Add your first model
+              </button>
+            }
+          >
+            Routes connect the model names your applications call to configured providers.
+            Add a model to start serving traffic.
+          </Empty>
         ) : (
-          <table>
+          <table className="page-table">
             <thead>
               <tr>
-                <th>Public model</th>
-                <th>Provider</th>
-                <th>Upstream</th>
-                <th>Strategy</th>
-                <th className="right">EWMA</th>
-                <th className="right">Errors</th>
-                <th className="right">In $/M</th>
-                <th>Cache</th>
-                <th>State</th>
-                <th />
+                <th scope="col">Public model</th>
+                <th scope="col">Provider</th>
+                <th scope="col">Upstream</th>
+                <th scope="col">Strategy</th>
+                <th scope="col" className="page-num">EWMA</th>
+                <th scope="col" className="page-num">Errors</th>
+                <th scope="col" className="page-num">In $/M</th>
+                <th scope="col">Cache</th>
+                <th scope="col">State</th>
+                <th scope="col" className="page-col-actions">
+                  <span className="page-sr">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {(routes.data ?? []).map((r) => (
+              {rows.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.public_model_id}</td>
-                  <td className="muted">{r.provider}</td>
-                  <td className="muted">{r.upstream_model_id}</td>
-                  <td><Badge tone={r.strategy === "priority" ? "neutral" : "info"}>{r.strategy}</Badge></td>
-                  <td className="right">{r.ewma_latency_ms ? ms(r.ewma_latency_ms) : "—"}</td>
-                  <td className="right">{r.ewma_error_rate ? `${Math.round(r.ewma_error_rate * 100)}%` : "0%"}</td>
-                  <td className="right">{usd(r.input_price_per_million)}</td>
+                  <th scope="row" className="page-model">
+                    {r.public_model_id}
+                  </th>
+                  <td className="muted page-trunc" title={r.provider}>
+                    {r.provider}
+                  </td>
+                  <td className="muted page-trunc" title={r.upstream_model_id}>
+                    {r.upstream_model_id}
+                  </td>
+                  <td>
+                    <Badge tone={r.strategy === "priority" ? "neutral" : "info"}>{r.strategy}</Badge>
+                  </td>
+                  <td className="page-num">{r.ewma_latency_ms ? ms(r.ewma_latency_ms) : "—"}</td>
+                  <td
+                    className={
+                      (r.ewma_error_rate ?? 0) >= 0.05
+                        ? "page-num page-error-high"
+                        : (r.ewma_error_rate ?? 0) > 0
+                          ? "page-num page-error-some"
+                          : "page-num"
+                    }
+                  >
+                    {r.ewma_error_rate ? `${Math.round(r.ewma_error_rate * 100)}%` : "0%"}
+                  </td>
+                  <td className="page-num">{usd(r.input_price_per_million)}</td>
                   <td>
                     {r.cache_enabled ? (
                       <Badge tone={r.semantic_cache_enabled ? "info" : "neutral"}>
@@ -85,10 +140,28 @@ export function RoutesPage() {
                       <span className="muted">off</span>
                     )}
                   </td>
-                  <td><Badge tone={r.enabled ? "good" : "neutral"}>{r.enabled ? "enabled" : "disabled"}</Badge></td>
-                  <td className="actions">
-                    <button className="ghost" onClick={() => toggle(r)}>{r.enabled ? "Disable" : "Enable"}</button>
-                    <button className="danger" onClick={() => remove(r)}>Delete</button>
+                  <td>
+                    <Badge tone={r.enabled ? "good" : "neutral"} dot>
+                      {r.enabled ? "enabled" : "disabled"}
+                    </Badge>
+                  </td>
+                  <td className="actions page-col-actions">
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => toggle(r)}
+                      aria-label={`${r.enabled ? "Disable" : "Enable"} route ${r.public_model_id}`}
+                    >
+                      {r.enabled ? "Disable" : "Enable"}
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => remove(r)}
+                      aria-label={`Delete route ${r.public_model_id}`}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}

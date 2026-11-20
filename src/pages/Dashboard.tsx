@@ -1,22 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { useAsync } from "../useAsync";
 import { ms, num, usd, when } from "../format";
-import { Badge, Empty, Loading, Panel, Stat } from "../components/ui";
-import { Bars, Ranked, type Bar } from "../components/chart";
+import { Badge, Empty, Panel } from "../components/ui";
+import { Bars, Ranked, Spark, type Bar } from "../components/chart";
 import { ErrorNote } from "../components/ErrorNote";
 import type { ProviderRow, Stats, UsageRow } from "../types";
+import "../styles/dashboard.css";
 
-type Preset = { id: string; label: string; window: string; bucketMs: number; dateLabels?: boolean };
+type Preset = {
+  id: string;
+  label: string;
+  window: string;
+  bucketMs: number;
+  /** the wall-clock span this preset asks the server for, used to spot a clamped chart */
+  spanMs: number;
+  dateLabels?: boolean;
+};
 
-const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+/** The chart is always 24 buckets: enough to show shape, few enough to stay readable. */
+const SLOTS = 24;
 
 const PRESETS: Preset[] = [
-  { id: "24h", label: "24h", window: "24h", bucketMs: 60 * 60 * 1000 },
-  { id: "48h", label: "48h", window: "48h", bucketMs: 2 * 60 * 60 * 1000 },
-  { id: "3d", label: "3d", window: "3d", bucketMs: 3 * 60 * 60 * 1000 },
-  { id: "7d", label: "7d", window: "7d", bucketMs: 6 * 60 * 60 * 1000, dateLabels: true },
-  { id: "30d", label: "30d", window: "30d", bucketMs: 24 * 60 * 60 * 1000, dateLabels: true },
+  { id: "24h", label: "24h", window: "24h", bucketMs: HOUR, spanMs: DAY },
+  { id: "48h", label: "48h", window: "48h", bucketMs: 2 * HOUR, spanMs: 2 * DAY },
+  { id: "3d", label: "3d", window: "3d", bucketMs: 3 * HOUR, spanMs: 3 * DAY },
+  { id: "7d", label: "7d", window: "7d", bucketMs: 6 * HOUR, spanMs: 7 * DAY, dateLabels: true },
+  { id: "30d", label: "30d", window: "30d", bucketMs: DAY, spanMs: 30 * DAY, dateLabels: true },
 ];
 
 /** yyyy-mm-dd in local time, the format an <input type="date"> speaks. */
@@ -45,11 +57,105 @@ function rangeText(from: string, to: string): string {
   return `${DAY_SHORT.format(start)} – ${DAY_LONG.format(end)}`;
 }
 
+/** "6 hours" / "24 days", for the chart's coverage note. */
+function durationText(lengthMs: number): string {
+  if (lengthMs >= DAY && lengthMs % DAY === 0) {
+    const days = lengthMs / DAY;
+    return `${days} ${days === 1 ? "day" : "days"}`;
+  }
+  if (lengthMs >= HOUR && lengthMs % HOUR === 0) {
+    const hours = lengthMs / HOUR;
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+  const minutes = Math.max(1, Math.round(lengthMs / 60_000));
+  return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+}
+
+/**
+ * One KPI. Label first, value large, a grounded secondary line underneath: the order an
+ * operator scans when something has gone wrong. `meter` and `spark` only appear when the
+ * API returned the data behind them.
+ */
+function Kpi({
+  label,
+  value,
+  hint,
+  hintTone,
+  foot,
+  meter,
+  spark,
+  warn,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  hintTone?: "good" | "warn";
+  foot?: ReactNode;
+  meter?: { ratio: number; label: string };
+  spark?: number[];
+  warn?: boolean;
+}) {
+  const ratio = meter ? Math.min(100, Math.max(0, meter.ratio * 100)) : 0;
+  return (
+    <div className={warn ? "dashboard-kpi is-warn" : "dashboard-kpi"}>
+      <div className="dashboard-kpi-head">
+        <span className="dashboard-kpi-label">{label}</span>
+        {hint ? (
+          <span
+            className={`dashboard-kpi-hint${hintTone ? ` is-${hintTone}` : ""}`}
+            title={hint}
+          >
+            {hint}
+          </span>
+        ) : null}
+      </div>
+      <span className="dashboard-kpi-value" title={value}>
+        {value}
+      </span>
+      {spark && spark.length > 0 ? <Spark values={spark} /> : null}
+      {meter ? (
+        <span className="dashboard-meter" role="img" aria-label={meter.label}>
+          <span className="dashboard-meter-fill" style={{ width: `${ratio}%` }} />
+        </span>
+      ) : null}
+      {foot ? <div className="dashboard-kpi-foot">{foot}</div> : null}
+    </div>
+  );
+}
+
+/** The first paint: placeholders at the same rhythm as the real cards, never a row of zeros. */
+function DashboardSkeleton() {
+  return (
+    <div className="dashboard-skeleton" aria-busy="true" aria-live="polite">
+      <p className="dashboard-sr-only">Loading dashboard…</p>
+      <div className="dashboard-sk-head" aria-hidden="true">
+        <span className="dashboard-sk dashboard-sk-title" />
+        <span className="dashboard-sk dashboard-sk-pill" />
+      </div>
+      <div className="dashboard-kpis" aria-hidden="true">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div className="dashboard-kpi" key={i}>
+            <span className="dashboard-sk dashboard-sk-label" />
+            <span className="dashboard-sk dashboard-sk-value" />
+            <span className="dashboard-sk dashboard-sk-line" />
+            <span className="dashboard-sk dashboard-sk-foot" />
+          </div>
+        ))}
+      </div>
+      <div className="dashboard-sk-panel" aria-hidden="true" />
+      <div className="dashboard-sk-grid" aria-hidden="true">
+        <div className="dashboard-sk-panel is-short" />
+        <div className="dashboard-sk-panel is-short" />
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const [rangeId, setRangeId] = useState<string>(
     () => localStorage.getItem(RANGE_KEY) ?? "24h",
   );
-  const [customOpen, setCustomOpen] = useState(rangeId === "custom");
+  const [customOpen, setCustomOpen] = useState(false);
   const [from, setFrom] = useState<string>(() => {
     const stored = localStorage.getItem(`${RANGE_KEY}.from`);
     if (stored) return stored;
@@ -96,10 +202,11 @@ export function Dashboard() {
   // narrows to the end date here.
   const window: string = custom ? `${span + 1}d` : preset.window;
   const bucketMs = custom
-    ? Math.max(60 * 60 * 1000, Math.round((span * DAY) / 24 / (60 * 60 * 1000)) * 60 * 60 * 1000)
+    ? Math.max(HOUR, Math.round((span * DAY) / 24 / HOUR) * HOUR)
     : preset.bucketMs;
   const dateLabels = custom ? span > 2 : Boolean(preset.dateLabels);
   const label = custom ? rangeText(from, to) : preset.label;
+  const shortLabel = custom ? `${span} ${span === 1 ? "day" : "days"}` : preset.label;
 
   function pick(next: Preset) {
     localStorage.setItem(RANGE_KEY, next.id);
@@ -136,7 +243,7 @@ export function Dashboard() {
   const buckets: Bar[] = useMemo(() => {
     if (rows.length === 0) return [];
     // 24 buckets per range, so the bars stay readable whether the window is 24h or 30d.
-    const slots = 24;
+    const slots = SLOTS;
     const size = bucketMs;
     const end = custom ? new Date(`${to}T00:00:00`).getTime() + DAY : Date.now();
     const start = custom ? new Date(`${from}T00:00:00`).getTime() : end - size * slots;
@@ -217,7 +324,7 @@ export function Dashboard() {
   }, [custom, rows]);
 
   const view: Stats | null = custom ? computed : stats.data;
-  const sampled = custom && rows.length >= 1000;
+  const sampled = rows.length >= 1000;
 
   const byModel: Bar[] = (view?.by_model ?? [])
     .map((m) => ({
@@ -233,36 +340,77 @@ export function Dashboard() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
 
-  if (stats.loading && !stats.data) return <Loading />;
+  if (stats.loading && !stats.data) return <DashboardSkeleton />;
+  if (custom && usage.loading && !usage.data) return <DashboardSkeleton />;
   if (stats.error) return <ErrorNote error={stats.error} />;
 
   const s = view!;
   const failures = rows.filter((r) => r.status !== "success");
   const openCircuits = (providers.data ?? []).filter((p) => p.circuit_state === "open");
 
+  const successRate = rows.length > 0 ? 1 - failures.length / rows.length : null;
+  const successText =
+    successRate === null
+      ? undefined
+      : `${(successRate * 100).toFixed(successRate === 1 ? 0 : 1)}% ok`;
+  const successTone: "good" | "warn" | undefined =
+    successRate === null ? undefined : successRate >= 0.99 ? "good" : successRate < 0.95 ? "warn" : undefined;
+
+  const cacheRatio = Math.min(1, Math.max(0, s.cache?.hit_ratio ?? 0));
+  const fallbacks = s.fallback_requests ?? 0;
+  const avgCost = s.requests > 0 ? Number(s.cost_usd) / s.requests : null;
+  const tokensPerRequest = s.requests > 0 ? s.total_tokens / s.requests : null;
+  const fallbackRate = s.requests > 0 ? fallbacks / s.requests : null;
+
+  // The 30d and 7d presets use one bar per day / six hours, which cannot span the whole
+  // window in 24 buckets. Say so rather than letting the chart look complete.
+  const coverageMs = SLOTS * bucketMs;
+  const clamped = !custom && coverageMs < preset.spanMs - 60_000;
+  const chartNote = clamped
+    ? `Bars are ${durationText(bucketMs)} wide, so the chart covers the most recent ` +
+      `${durationText(coverageMs)} of the ${preset.label} window. The KPIs above cover all ${preset.label}.`
+    : null;
+
+  const sampleNote = sampled
+    ? custom
+      ? "Built from the API's 1,000-row page, so these totals are a sample of the range, not an exact count. Narrow the dates for exact figures."
+      : "The chart and the failure list use the API's 1,000-row page; the KPIs above come from server aggregates."
+    : null;
+
   return (
-    <>
-      <div className="page-head">
-        <h1>{custom ? label : `Last ${label}`}</h1>
+    <div className="dashboard">
+      <div className="page-head page-head-titled dashboard-head">
+        <div className="page-head-titles">
+          <h1>Dashboard</h1>
+          <p className="page-sub">
+            {custom ? label : `Last ${label}`} · requests, spend, cache, latency and
+            fallbacks for the window.
+          </p>
+        </div>
         <div className="range-wrap">
-          <div className="range" role="group" aria-label="Time range">
+          <div className="range dashboard-range" role="group" aria-label="Time range">
             {PRESETS.map((r) => (
               <button
                 key={r.id}
+                type="button"
                 className={!custom && r.id === rangeId ? "on" : ""}
                 onClick={() => pick(r)}
                 aria-pressed={!custom && r.id === rangeId}
+                title={`Last ${r.label}`}
               >
                 {r.label}
               </button>
             ))}
             <button
               ref={customButton}
+              type="button"
               className={custom ? "on" : ""}
               onClick={() => setCustomOpen((open) => !open)}
               aria-pressed={custom}
               aria-expanded={customOpen}
               aria-controls="custom-range"
+              aria-haspopup="dialog"
+              title="Choose a date range"
             >
               Custom
             </button>
@@ -270,7 +418,7 @@ export function Dashboard() {
 
           {customOpen ? (
             <div
-              className="custom-pop"
+              className="custom-pop dashboard-pop"
               id="custom-range"
               role="group"
               aria-label="Custom date range"
@@ -300,7 +448,7 @@ export function Dashboard() {
                 <span className="range-span" aria-live="polite">
                   {validRange ? `${span} ${span === 1 ? "day" : "days"}` : "Pick both dates"}
                 </span>
-                <button className="primary" onClick={applyCustom} disabled={!validRange}>
+                <button type="button" className="primary" onClick={applyCustom} disabled={!validRange}>
                   Apply
                 </button>
               </div>
@@ -309,26 +457,103 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="stats">
-        <Stat label="Requests" value={num(s.requests)} sub={`${num(s.total_tokens)} tokens`} />
-        <Stat label="Spend" value={usd(s.cost_usd)} sub={custom ? `over ${span} days` : `over ${label}`} />
-        <Stat
-          label="Cache"
-          value={`${Math.round((s.cache?.hit_ratio ?? 0) * 100)}%`}
-          sub={`${usd(s.cache?.savings_usd)} saved · ${num(s.cache?.semantic_hits)} semantic`}
+      <div className="dashboard-kpis">
+        <Kpi
+          label="Requests"
+          value={num(s.requests)}
+          hint={successText}
+          hintTone={successTone}
+          spark={buckets.map((b) => b.value)}
+          foot={
+            <>
+              <span>{num(s.total_tokens)} tokens</span>
+              {tokensPerRequest !== null ? (
+                <span>{num(Math.round(tokensPerRequest))} tok / request</span>
+              ) : null}
+            </>
+          }
         />
-        <Stat label="Latency p95" value={ms(s.latency_ms?.p95)} sub={`p50 ${ms(s.latency_ms?.p50)}`} />
-        <Stat label="Fallbacks" value={num(s.fallback_requests ?? 0)} sub="served by a backup route" />
+        <Kpi
+          label="Spend"
+          value={usd(s.cost_usd)}
+          hint={shortLabel}
+          foot={
+            avgCost !== null ? (
+              <span>{usd(avgCost)} avg per request</span>
+            ) : (
+              <span>No billable requests in this window</span>
+            )
+          }
+        />
+        <Kpi
+          label="Cache"
+          value={`${Math.round(cacheRatio * 100)}%`}
+          hint="hit rate"
+          meter={{
+            ratio: cacheRatio,
+            label: `${Math.round(cacheRatio * 100)}% of prompt tokens served from cache`,
+          }}
+          foot={
+            <>
+              <span>{usd(s.cache?.savings_usd)} saved</span>
+              {s.cache?.semantic_hits !== undefined ? (
+                <span>{num(s.cache.semantic_hits)} semantic hits</span>
+              ) : (
+                <span>{num(s.cache?.cached_input_tokens)} cached tokens</span>
+              )}
+            </>
+          }
+        />
+        <Kpi
+          label="Latency p95"
+          value={ms(s.latency_ms?.p95)}
+          hint="p95"
+          foot={
+            <>
+              <span>p50 {ms(s.latency_ms?.p50)}</span>
+              <span>p99 {ms(s.latency_ms?.p99)}</span>
+            </>
+          }
+        />
+        <Kpi
+          label="Fallbacks"
+          value={num(fallbacks)}
+          hint={`of ${num(s.requests)}`}
+          warn={fallbacks > 0}
+          foot={
+            fallbackRate === null ? (
+              <span>No calls in this window</span>
+            ) : fallbacks === 0 ? (
+              <span>Every call used its primary route</span>
+            ) : (
+              <span>{(fallbackRate * 100).toFixed(1)}% served by a backup route</span>
+            )
+          }
+        />
       </div>
 
-      {sampled ? (
-        <p className="note">
-          1000 rows is the API's page size: these numbers are a sample of the range, not the
-          full total. Narrow the dates for exact figures.
-        </p>
-      ) : null}
-      <Panel title="Requests over time" hint={`${label} · ${rows.length} calls in range`}>
-        <Bars data={buckets} format={(v) => `${v} req`} />
+      {sampleNote ? <p className="note dashboard-note">{sampleNote}</p> : null}
+
+      <Panel
+        title="Requests over time"
+        hint={
+          usage.loading && !usage.data
+            ? "loading"
+            : `${label} · ${num(rows.length)} calls · ${durationText(bucketMs)} per bar`
+        }
+      >
+        {usage.error ? (
+          <ErrorNote error={usage.error} />
+        ) : (
+          <Bars
+            data={buckets}
+            format={(v) => `${num(v)} req`}
+            axisFormat={(v) => num(v)}
+            label={`Requests over time, ${label}`}
+            note={chartNote}
+            emptyHint={`No requests recorded in this ${custom ? "range" : `${label} window`} yet.`}
+          />
+        )}
       </Panel>
 
       <div className="grid">
@@ -341,9 +566,14 @@ export function Dashboard() {
       </div>
 
       <div className="grid">
-        <Panel title="Providers" hint="circuit state">
-          {providers.loading ? (
-            <Loading />
+        <Panel
+          title="Providers"
+          hint={providers.data ? `${providers.data.length} configured` : "circuit state"}
+        >
+          {providers.loading && !providers.data ? (
+            <p className="empty dashboard-placeholder">Checking provider circuits…</p>
+          ) : providers.error ? (
+            <ErrorNote error={providers.error} />
           ) : (providers.data ?? []).length === 0 ? (
             <Empty>No providers configured.</Empty>
           ) : (
@@ -388,8 +618,13 @@ export function Dashboard() {
           ) : null}
         </Panel>
 
-        <Panel title="Recent failures" hint={label}>
-          {failures.length === 0 ? (
+        <Panel
+          title="Recent failures"
+          hint={usage.loading && !usage.data ? "loading" : `${num(failures.length)} in ${label}`}
+        >
+          {usage.loading && !usage.data ? (
+            <p className="empty dashboard-placeholder">Loading recent calls…</p>
+          ) : failures.length === 0 ? (
             <Empty>No failed calls in this window.</Empty>
           ) : (
             <table>
@@ -417,6 +652,6 @@ export function Dashboard() {
           )}
         </Panel>
       </div>
-    </>
+    </div>
   );
 }

@@ -6,6 +6,19 @@ import { Badge, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import type { GatewaySettings } from "../types";
 
+const SCOPE_COPY: Record<string, string> = {
+  read: "View configuration, usage and client keys.",
+  write: "Create, edit and delete configuration.",
+  admin: "Full administrative access to this gateway.",
+  keys: "Create and revoke client keys.",
+  routes: "Create, edit and delete routes.",
+  providers: "Create, edit and delete providers.",
+};
+
+function describeScope(scope: string): string {
+  return SCOPE_COPY[scope] ?? "Granted to this identity by the gateway.";
+}
+
 /** Who you are and which token this console is using. Gateway switches live on Configuration. */
 export function SettingsPage() {
   const { mode, signIn, signOut } = useAuth();
@@ -25,43 +38,52 @@ export function SettingsPage() {
 
   const gw = settings.data;
   const readOnly = gw?.can_write === false;
+  const scopes = gw?.scopes ?? [];
 
   return (
     <>
-      <h1>Settings</h1>
-      {note ? <p className="note">{note}</p> : null}
+      <header className="page-head page-head-titled page-head-settings">
+        <div className="page-head-titles">
+          <h1>Settings</h1>
+          <p className="page-sub">
+            The identity this console is signed in as, what it is allowed to do, and which
+            gateway and build it is talking to.
+          </p>
+        </div>
+      </header>
 
       <Panel title="Session" hint={mode === "proxy" ? "SSO proxy" : "admin token"}>
         {settings.loading ? (
-          <Loading />
+          <Loading label="Loading session…" />
         ) : settings.error ? (
           <ErrorNote error={settings.error} />
         ) : (
-          <div className="settings-body">
-            <dl className="facts">
-              <div>
-                <dt>Signed in as</dt>
-                <dd>{gw?.subject ?? "bootstrap token"}</dd>
+          <div className="settings-body page-session">
+            <div className="page-identity">
+              <div className="page-identity-id">
+                <span className="page-eyebrow">Signed in as</span>
+                <span className="page-identity-value">{gw?.subject ?? "bootstrap token"}</span>
               </div>
-              <div>
-                <dt>Scopes</dt>
-                <dd>
-                  {(gw?.scopes ?? []).length > 0 ? (
-                    (gw?.scopes ?? []).map((scope) => (
-                      <Badge key={scope} tone={scope === "write" ? "good" : "neutral"}>
-                        {scope}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </dd>
+              <div className="page-identity-badges">
+                <Badge tone={mode === "proxy" ? "info" : "neutral"}>
+                  {mode === "proxy" ? "SSO proxy" : "Admin token"}
+                </Badge>
+                <Badge tone={readOnly ? "warn" : "good"} dot>
+                  {readOnly ? "read-only" : "read and write"}
+                </Badge>
               </div>
+            </div>
+
+            <dl className="facts page-facts">
               <div>
                 <dt>Gateway</dt>
                 <dd>
-                  <code>{gatewayOrigin || "this origin"}</code>
+                  <code>{gatewayOrigin || "same origin"}</code>
                 </dd>
+              </div>
+              <div>
+                <dt>Auth mode</dt>
+                <dd>{gw?.auth_mode ?? mode ?? "—"}</dd>
               </div>
               <div>
                 <dt>Build</dt>
@@ -71,39 +93,76 @@ export function SettingsPage() {
               </div>
             </dl>
 
+            <section className="page-scopes" aria-labelledby="settings-scopes-title">
+              <h3 className="page-section-title" id="settings-scopes-title">
+                Scopes
+              </h3>
+              {scopes.length > 0 ? (
+                <ul className="page-scope-list">
+                  {scopes.map((scope) => (
+                    <li key={scope}>
+                      <Badge tone={scope === "write" ? "good" : "neutral"}>{scope}</Badge>
+                      <span>{describeScope(scope)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="page-muted-line">
+                  No scopes reported. This identity may be a bootstrap token or a proxy session.
+                </p>
+              )}
+            </section>
+
             {readOnly ? (
-              <p className="note">
-                This token is read-only. Create, edit and delete controls are disabled;
-                use a token with the <code>write</code> scope to change configuration.
+              <p className="page-callout page-callout-warn" role="note">
+                This token is read-only. Create, edit and delete controls are disabled. Use a
+                token with the <code>write</code> scope to change configuration.
               </p>
             ) : null}
 
             {mode === "token" ? (
-              <>
-                <h3 className="form-section">Replace token</h3>
-                <label className="field">
+              <section className="page-token" aria-labelledby="settings-token-title">
+                <div className="page-token-head">
+                  <h3 id="settings-token-title">Replace token</h3>
+                  <span className="page-token-hint">Applies to this tab only</span>
+                </div>
+                <label className="field page-token-field" htmlFor="settings-admin-token">
                   <span>Admin token</span>
                   <input
+                    id="settings-admin-token"
                     type="password"
                     value={token}
                     placeholder="paste a token to switch this tab to it"
                     onChange={(e) => setTokenValue(e.target.value)}
                     autoComplete="off"
                     spellCheck={false}
+                    aria-describedby="settings-token-help"
                   />
-                  <small>Kept in sessionStorage only; never a cookie and never a URL.</small>
+                  <small id="settings-token-help">
+                    Stored in sessionStorage only; never a cookie and never a URL. Signing out clears it.
+                  </small>
                 </label>
-                <div className="modal-actions">
-                  <button className="ghost" onClick={signOut}>
+                <div className="page-token-actions">
+                  <button type="button" className="ghost" onClick={signOut}>
                     Sign out
                   </button>
-                  <button className="primary" disabled={!token.trim()} onClick={applyToken}>
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={!token.trim()}
+                    onClick={applyToken}
+                  >
                     Use token
                   </button>
                 </div>
-              </>
+                {note ? (
+                  <p className="page-feedback" role="status">
+                    {note}
+                  </p>
+                ) : null}
+              </section>
             ) : (
-              <p className="muted">
+              <p className="page-muted-line">
                 Authentication is delegated to the proxy; there is no token to manage here.
               </p>
             )}

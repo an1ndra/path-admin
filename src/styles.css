@@ -367,7 +367,7 @@ button.ghost.small { padding: 3px 8px; font-size: 12px; }
   --d-required: #f97066;
 
   width: min(780px, 100%);
-  max-height: 90vh;
+  max-height: calc(100vh - 32px);
   overflow: hidden;
   display: flex; flex-direction: column;
   padding: 26px;
@@ -407,14 +407,19 @@ button.ghost.small { padding: 3px 8px; font-size: 12px; }
   border-top: 1px solid var(--d-border);
   box-shadow: inset 0 10px 10px -10px #00000080, inset 0 -12px 12px -12px #00000090;
   /* Overlay scrollbars draw over the content; this keeps notes and inputs clear. */
-  padding-right: 12px; margin-right: -12px; padding-bottom: 10px;
+  padding-right: 12px; margin-right: -12px; padding-bottom: 6px;
   scrollbar-width: thin; scrollbar-color: #2b3648 transparent;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+}
+/* Once scrolled, fade the top edge too, so a cut control never looks broken. */
+.dialog[data-scrolled="true"] .dialog-scroll {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 26px), transparent);
 }
 .dialog-scroll .dlg-section:first-child { margin-top: 0; padding-top: 12px; border-top: 0; }
-.dlg-section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--d-border); }
-.dlg-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dlg-section { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--d-border); }
+.dlg-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .dlg-section-head h3 {
   margin: 0; font-size: 10.5px; font-weight: 600; letter-spacing: 1.1px;
   text-transform: uppercase; color: var(--d-muted);
@@ -425,7 +430,7 @@ button.ghost.small { padding: 3px 8px; font-size: 12px; }
 .dlg-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .dlg-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-.dialog .fields, .dialog .fields.three { gap: 12px; }
+.dialog .fields, .dialog .fields.three { gap: 10px; }
 .dialog .fields.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .dialog .field { gap: 5px; }
 .dialog .field > span:first-child {
