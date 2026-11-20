@@ -38,6 +38,8 @@ export interface ProviderRow {
   type: string;
   base_url: string;
   api_version?: string | null;
+  project?: string | null;
+  location?: string | null;
   enabled: boolean;
   circuit_state: string;
   circuit_retry_after_seconds?: number;

@@ -190,7 +190,20 @@ td.actions button { padding: 4px 8px; font-size: 12px; margin-left: 6px; }
   background: #0b0e14; border: 1px solid var(--line); color: var(--text);
   padding: 8px 10px; border-radius: 6px; font: inherit;
 }
-.field input[type="checkbox"] { width: 16px; height: 16px; padding: 0; }
+.field.check {
+  grid-column: 1 / -1;
+  flex-direction: row; align-items: flex-start; gap: 10px;
+  padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px;
+  background: #0b0e14; cursor: pointer;
+}
+.field.check:hover { border-color: #2b3648; }
+.field.check input[type="checkbox"] {
+  width: 16px; height: 16px; margin: 1px 0 0; padding: 0;
+  accent-color: var(--accent); cursor: pointer; flex: none;
+}
+.field.check .check-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.field.check strong { color: var(--text); font-weight: 500; font-size: 12px; }
+.field.check:has(input:checked) { border-color: #4da3ff59; background: #4da3ff0d; }
 .field small { color: var(--muted); font-size: 11px; }
 .field .with-suffix { position: relative; display: block; }
 .field .with-suffix input { width: 100%; padding-right: 54px; }

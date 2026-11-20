@@ -66,47 +66,55 @@ export function Fields({
 }) {
   return (
     <div className="fields">
-      {spec.map((field) => (
-        <label key={field.name} className={field.wide ? "field wide" : "field"}>
-          <span>
-            {field.label}
-            {field.required ? <em> *</em> : null}
-          </span>
-          {field.type === "select" ? (
-            <select
-              value={form.values[field.name] ?? ""}
-              onChange={(e) => form.set(field.name, e.target.value)}
-            >
-              {field.placeholder ? <option value="">{field.placeholder}</option> : null}
-              {(field.options ?? []).map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          ) : field.type === "checkbox" ? (
+      {spec.map((field) =>
+        field.type === "checkbox" ? (
+          <label key={field.name} className="field check">
             <input
               type="checkbox"
               checked={form.values[field.name] === "true"}
               onChange={(e) => form.set(field.name, e.target.checked ? "true" : "false")}
             />
-          ) : (
-            <span className={field.suffix ? "with-suffix" : undefined}>
-              <input
-                type={field.type === "number" ? "text" : (field.type ?? "text")}
-                inputMode={field.type === "number" ? "decimal" : undefined}
-                placeholder={field.placeholder}
+            <span className="check-text">
+              <strong>{field.label}</strong>
+              {field.hint ? <small>{field.hint}</small> : null}
+            </span>
+          </label>
+        ) : (
+          <label key={field.name} className={field.wide ? "field wide" : "field"}>
+            <span>
+              {field.label}
+              {field.required ? <em> *</em> : null}
+            </span>
+            {field.type === "select" ? (
+              <select
                 value={form.values[field.name] ?? ""}
                 onChange={(e) => form.set(field.name, e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              {field.suffix ? <span className="suffix">{field.suffix}</span> : null}
-            </span>
-          )}
-          {field.hint ? <small>{field.hint}</small> : null}
-        </label>
-      ))}
+              >
+                {field.placeholder ? <option value="">{field.placeholder}</option> : null}
+                {(field.options ?? []).map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className={field.suffix ? "with-suffix" : undefined}>
+                <input
+                  type={field.type === "number" ? "text" : (field.type ?? "text")}
+                  inputMode={field.type === "number" ? "decimal" : undefined}
+                  placeholder={field.placeholder}
+                  value={form.values[field.name] ?? ""}
+                  onChange={(e) => form.set(field.name, e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                {field.suffix ? <span className="suffix">{field.suffix}</span> : null}
+              </span>
+            )}
+            {field.hint ? <small>{field.hint}</small> : null}
+          </label>
+        ),
+      )}
     </div>
   );
 }

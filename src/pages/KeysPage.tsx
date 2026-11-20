@@ -7,17 +7,28 @@ import { ErrorNote } from "../components/ErrorNote";
 import { Fields, Modal, toPayload, useForm, type FieldSpec } from "../components/form";
 import type { KeyRow } from "../types";
 
-const SPEC: FieldSpec[] = [
+const IDENTITY: FieldSpec[] = [
   { name: "name", label: "Name", required: true, placeholder: "checkout-service" },
-  { name: "credit_limit_usd", label: "Credit limit (USD)", type: "number", hint: "blank = unlimited" },
-  { name: "daily_limit_usd", label: "Daily limit (USD)", type: "number" },
-  { name: "monthly_limit_usd", label: "Monthly limit (USD)", type: "number" },
-  { name: "end_user_daily_limit_usd", label: "Per end user / day (USD)", type: "number" },
-  { name: "rpm_limit", label: "Requests / minute", type: "number" },
-  { name: "max_concurrent_requests", label: "Max concurrent", type: "number" },
-  { name: "max_output_tokens", label: "Max output tokens", type: "number" },
-  { name: "allowed_models", label: "Allowed models", wide: true, hint: "comma separated ids or globs, blank = all" },
+  {
+    name: "allowed_models",
+    label: "Allowed models",
+    wide: true,
+    placeholder: "gpt-4o-mini, claude-*, cheap",
+    hint: "comma separated ids, aliases or globs — blank allows every model",
+  },
 ];
+const SPEND: FieldSpec[] = [
+  { name: "credit_limit_usd", label: "Credit limit", type: "number", suffix: "USD", hint: "blank = unlimited" },
+  { name: "daily_limit_usd", label: "Daily limit", type: "number", suffix: "USD" },
+  { name: "monthly_limit_usd", label: "Monthly limit", type: "number", suffix: "USD" },
+  { name: "end_user_daily_limit_usd", label: "Per end user / day", type: "number", suffix: "USD" },
+];
+const LIMITS: FieldSpec[] = [
+  { name: "rpm_limit", label: "Requests / minute", type: "number", hint: "defaults to the gateway value" },
+  { name: "max_concurrent_requests", label: "Max concurrent", type: "number" },
+  { name: "max_output_tokens", label: "Max output tokens", type: "number", suffix: "tokens", hint: "clamps max_tokens" },
+];
+const SPEC: FieldSpec[] = [...IDENTITY, ...SPEND, ...LIMITS];
 
 export function KeysPage() {
   const keys = useAsync(() => api<KeyRow[]>("/admin/keys"), []);
@@ -135,12 +146,25 @@ export function KeysPage() {
       </Panel>
 
       {creating ? (
-        <Modal title="New client key" onClose={() => setCreating(false)}>
-          <Fields spec={SPEC} form={form} />
+        <Modal title="New client key" wide onClose={() => setCreating(false)}>
+          <p className="modal-intro">
+            The key is shown once after creation. Budgets are optional; leave a limit blank for
+            no cap. Per-key limits apply in addition to the project's caps.
+          </p>
+          <h3 className="form-section">Identity</h3>
+          <Fields spec={IDENTITY} form={form} />
+          <h3 className="form-section">Spend</h3>
+          <Fields spec={SPEND} form={form} />
+          <h3 className="form-section">Rate and size limits</h3>
+          <Fields spec={LIMITS} form={form} />
           {form.error ? <ErrorNote error={form.error} /> : null}
           <div className="modal-actions">
             <button className="ghost" onClick={() => setCreating(false)}>Cancel</button>
-            <button className="primary" disabled={form.busy} onClick={create}>
+            <button
+              className="primary"
+              disabled={form.busy || !form.values.name?.trim()}
+              onClick={create}
+            >
               {form.busy ? "Creating…" : "Create key"}
             </button>
           </div>

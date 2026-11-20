@@ -18,7 +18,7 @@ interface MailSettings {
   updated_at?: string | null;
 }
 
-const MAIL_SPEC: FieldSpec[] = [
+const MAIL_SERVER: FieldSpec[] = [
   { name: "host", label: "SMTP host", placeholder: "smtp.postmarkapp.com", wide: true },
   { name: "port", label: "Port", type: "number", placeholder: "587" },
   {
@@ -32,9 +32,12 @@ const MAIL_SPEC: FieldSpec[] = [
     type: "password",
     hint: "stored encrypted; blank keeps the current one, - clears it",
   },
+];
+const MAIL_DELIVERY: FieldSpec[] = [
   { name: "from", label: "From address", placeholder: "path@example.com" },
   { name: "to", label: "Recipients", wide: true, hint: "comma separated" },
 ];
+const MAIL_SPEC: FieldSpec[] = [...MAIL_SERVER, ...MAIL_DELIVERY];
 
 /** Gateway switches and delivery. Account and token live on Settings. */
 export function ConfigurationPage() {
@@ -224,7 +227,10 @@ export function ConfigurationPage() {
               )}
             </p>
 
-            <Fields spec={MAIL_SPEC} form={form} />
+            <h3 className="form-section">SMTP server</h3>
+            <Fields spec={MAIL_SERVER} form={form} />
+            <h3 className="form-section">Delivery</h3>
+            <Fields spec={MAIL_DELIVERY} form={form} />
             {form.error ? <ErrorNote error={form.error} /> : null}
 
             <div className="modal-actions">

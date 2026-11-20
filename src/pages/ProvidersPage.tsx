@@ -6,23 +6,46 @@ import { ErrorNote } from "../components/ErrorNote";
 import { Fields, Modal, toPayload, useForm, type FieldSpec } from "../components/form";
 import type { ProviderRow } from "../types";
 
-const FIELDS: FieldSpec[] = [
-  { name: "slug", label: "Slug", required: true, placeholder: "openai" },
+const IDENTITY: FieldSpec[] = [
+  { name: "slug", label: "Slug", required: true, placeholder: "openai", hint: "the name routes and alerts use" },
   {
     name: "type",
-    label: "Type",
+    label: "Wire format",
     type: "select",
     options: [
-      { value: "openai", label: "openai (OpenAI wire format)" },
-      { value: "anthropic", label: "anthropic (Messages API)" },
+      { value: "openai", label: "openai — OpenAI-compatible" },
+      { value: "anthropic", label: "anthropic — Messages API" },
+      { value: "gemini", label: "gemini — AI Studio native" },
+      { value: "vertex", label: "vertex — Vertex AI native" },
     ],
   },
-  { name: "base_url", label: "Base URL", required: true, wide: true, placeholder: "https://api.openai.com/v1" },
-  { name: "api_key", label: "API key", type: "password", hint: "encrypted at rest; leave blank to keep the stored one" },
-  { name: "api_version", label: "api_version", hint: "set for Azure OpenAI (deployment in the path)" },
-  { name: "request_timeout_ms", label: "Request timeout (ms)", type: "number" },
-  { name: "stream_idle_timeout_ms", label: "Stream idle timeout (ms)", type: "number" },
 ];
+const ENDPOINT: FieldSpec[] = [
+  {
+    name: "base_url",
+    label: "Base URL",
+    wide: true,
+    placeholder: "https://api.openai.com/v1",
+    hint: "for VERTEX this may be left blank; it is derived from the location",
+  },
+  { name: "api_version", label: "api_version", hint: "Azure OpenAI only (deployment in the path)" },
+  { name: "request_timeout_ms", label: "Request timeout", type: "number", suffix: "ms" },
+  { name: "stream_idle_timeout_ms", label: "Stream idle timeout", type: "number", suffix: "ms" },
+];
+const VERTEX: FieldSpec[] = [
+  { name: "project", label: "GCP project", placeholder: "my-project", hint: "Vertex only" },
+  { name: "location", label: "Location", placeholder: "us-central1", hint: "Vertex only" },
+];
+const CREDENTIAL: FieldSpec[] = [
+  {
+    name: "api_key",
+    label: "Credential",
+    type: "password",
+    wide: true,
+    hint: "encrypted at rest; blank keeps the stored one. VERTEX takes the service-account JSON.",
+  },
+];
+const FIELDS: FieldSpec[] = [...IDENTITY, ...ENDPOINT, ...VERTEX, ...CREDENTIAL];
 
 export function ProvidersPage() {
   const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), []);
@@ -34,6 +57,14 @@ export function ProvidersPage() {
   async function reload() {
     await providers.reload();
   }
+
+  const type = form.values.type ?? "openai";
+  const vertex = type === "vertex";
+  const ready =
+    Boolean(form.values.slug?.trim()) &&
+    (vertex
+      ? Boolean(form.values.project?.trim() && form.values.location?.trim())
+      : Boolean(form.values.base_url?.trim()));
 
   async function create() {
     form.setBusy(true);
@@ -100,8 +131,32 @@ export function ProvidersPage() {
       type: row.type.toLowerCase(),
       base_url: row.base_url,
       api_version: row.api_version ?? "",
+      project: row.project ?? "",
+      location: row.location ?? "",
     });
     setEditing(row);
+  }
+
+  function providerForm() {
+    return (
+      <>
+        <h3 className="form-section">Identity</h3>
+        <Fields spec={IDENTITY} form={form} />
+
+        <h3 className="form-section">Endpoint</h3>
+        <Fields spec={ENDPOINT} form={form} />
+
+        {vertex ? (
+          <>
+            <h3 className="form-section">Vertex</h3>
+            <Fields spec={VERTEX} form={form} />
+          </>
+        ) : null}
+
+        <h3 className="form-section">Credential</h3>
+        <Fields spec={CREDENTIAL} form={form} />
+      </>
+    );
   }
 
   return (
@@ -159,12 +214,16 @@ export function ProvidersPage() {
       </Panel>
 
       {creating ? (
-        <Modal title="New provider" onClose={() => setCreating(false)}>
-          <Fields spec={FIELDS} form={form} />
+        <Modal title="New provider" wide onClose={() => setCreating(false)}>
+          <p className="modal-intro">
+            A provider is one upstream endpoint. Add routes after creating it so clients can
+            reach its models.
+          </p>
+          {providerForm()}
           {form.error ? <ErrorNote error={form.error} /> : null}
           <div className="modal-actions">
             <button className="ghost" onClick={() => setCreating(false)}>Cancel</button>
-            <button className="primary" disabled={form.busy} onClick={create}>
+            <button className="primary" disabled={form.busy || !ready} onClick={create}>
               {form.busy ? "Creating…" : "Create provider"}
             </button>
           </div>
@@ -172,12 +231,12 @@ export function ProvidersPage() {
       ) : null}
 
       {editing ? (
-        <Modal title={`Edit ${editing.slug}`} onClose={() => setEditing(null)}>
-          <Fields spec={FIELDS} form={form} />
+        <Modal title={`Edit ${editing.slug}`} wide onClose={() => setEditing(null)}>
+          {providerForm()}
           {form.error ? <ErrorNote error={form.error} /> : null}
           <div className="modal-actions">
             <button className="ghost" onClick={() => setEditing(null)}>Cancel</button>
-            <button className="primary" disabled={form.busy} onClick={update}>
+            <button className="primary" disabled={form.busy || !ready} onClick={update}>
               {form.busy ? "Saving…" : "Save changes"}
             </button>
           </div>
