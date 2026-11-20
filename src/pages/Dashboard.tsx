@@ -582,7 +582,6 @@ export function Dashboard() {
                 <tr>
                   <th>Provider</th>
                   <th>Circuit</th>
-                  <th>Type</th>
                   <th className="right">Traffic</th>
                 </tr>
               </thead>
@@ -601,10 +600,9 @@ export function Dashboard() {
                         <span className="muted"> {p.circuit_retry_after_seconds}s</span>
                       ) : null}
                     </td>
-                    <td className="muted">{p.type}</td>
                     <td className="right">
-                      {num(s.by_provider?.[p.slug]?.requests ?? 0)}{" "}
-                      <span className="muted">{usd(s.by_provider?.[p.slug]?.cost_usd)}</span>
+                      {num(s.by_provider?.[p.slug]?.requests ?? 0)}
+                      <span className="muted"> · {usd(s.by_provider?.[p.slug]?.cost_usd)}</span>
                     </td>
                   </tr>
                 ))}
