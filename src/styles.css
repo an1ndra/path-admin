@@ -42,7 +42,7 @@ html[data-theme="light"] {
   --accent: #1a5fc4;
   --accent-hover: #1650a8;
   --accent-ink: #ffffff;
-  --accent-soft: #5f97dc;
+  --accent-soft: #5389cf;
   --good: #17692d;
   --warn: #7a5000;
   --bad: #b42318;
@@ -65,7 +65,7 @@ html[data-cb="true"] {
 }
 html[data-theme="light"][data-cb="true"] {
   --good: #00795b;
-  --warn: #a06a00;
+  --warn: #875900;
   --bad: #8a2f00;
   --bad-text: #7a2a00;
 }
@@ -505,7 +505,7 @@ button.ghost.small { padding: 3px 8px; font-size: 12px; }
 .dialog .field input,
 .dialog .field select {
   height: 36px; padding: 0 11px; font-size: 12px;
-  background: var(--d-input); border: 1px solid var(--d-border); border-radius: 6px;
+  background: var(--d-input); border: 1px solid var(--control-line); border-radius: 6px;
   color: var(--d-text);
 }
 .dialog .field input::placeholder { color: var(--d-faint); opacity: 1; }
@@ -653,5 +653,15 @@ button.primary:disabled, .dlg-primary:disabled, .login-submit:disabled {
   color: var(--muted);
   border-color: var(--line);
   opacity: 1;
+  cursor: not-allowed;
+}
+
+
+/* Ghost/danger actions in read-only mode were visually identical to enabled ones. */
+button.ghost:disabled, button.danger:disabled {
+  color: var(--faint);
+  border-color: var(--line);
+  background: transparent;
+  opacity: .7;
   cursor: not-allowed;
 }

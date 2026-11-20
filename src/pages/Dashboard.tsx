@@ -99,7 +99,10 @@ function Kpi({
   return (
     <div className={warn ? "dashboard-kpi is-warn" : "dashboard-kpi"}>
       <div className="dashboard-kpi-head">
-        <span className="dashboard-kpi-label">{label}</span>
+        <span className="dashboard-kpi-label">
+          {label}
+          {warn ? <span className="page-sr"> — needs attention</span> : null}
+        </span>
         {hint ? (
           <span
             className={`dashboard-kpi-hint${hintTone ? ` is-${hintTone}` : ""}`}

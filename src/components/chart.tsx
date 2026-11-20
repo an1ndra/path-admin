@@ -177,7 +177,7 @@ export function Spark({ values, height = 32 }: { values: number[]; height?: numb
         <span
           key={i}
           className={i === values.length - 1 ? "dash-spark-bar is-latest" : "dash-spark-bar"}
-          style={{ height: `${Math.max(8, (value / max) * 100)}%` }}
+          style={{ height: `${value === 0 ? 0 : Math.max(8, (value / max) * 100)}%` }}
         />
       ))}
     </div>
