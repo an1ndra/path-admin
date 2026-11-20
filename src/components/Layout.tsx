@@ -37,6 +37,17 @@ export function Layout() {
     if (menuOpen) wasOpen.current = true;
   }, [menuOpen]);
 
+  // Rotating or resizing past the drawer breakpoint must not leave an open drawer
+  // rendered without its media-query styles (and with the page scroll locked).
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 820px)");
+    const onChange = () => {
+      if (!media.matches) setMenuOpen(false);
+    };
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
   // A route change closes the drawer and moves focus to the new page, so a keyboard
   // user does not land back on <body>.
   useEffect(() => {

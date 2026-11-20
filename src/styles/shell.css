@@ -27,6 +27,13 @@
 /* --- sidebar ------------------------------------------------------------ */
 
 .shell .shell-menu-toggle { display: none; }
+/* The drawer is only styled inside the <=820 block. Scoping the keep-hidden rule to
+   >=821 (rather than a bare base rule) avoids an equal-specificity clash with that
+   block's `display: flex`, and guarantees a resize with the menu open never leaves
+   an unstyled block in the layout. */
+@media (min-width: 821px) {
+  .shell-mobile-menu, .shell-mobile-backdrop { display: none !important; }
+}
 .shell .shell-sidebar {
   position: sticky; top: 0; align-self: start;
   height: 100vh; overflow-y: auto;
@@ -706,9 +713,7 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    .shell-mobile-menu, .shell-mobile-backdrop { animation: none; }
-  }
+
   .shell .shell-mobile-menu[hidden] { display: none; }
   .shell-mobile-menu {
     position: fixed; top: 0; right: 0; bottom: 0; z-index: 61;
@@ -777,6 +782,10 @@
     font-size: 11px; color: var(--muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  @media (prefers-reduced-motion: reduce) {
+    .shell-mobile-menu, .shell-mobile-backdrop { animation: none !important; }
+  }
+
   .shell-mobile-signout {
     min-height: 44px;
     margin-top: 4px;
@@ -838,7 +847,7 @@
 /* Below this width the routes table cannot show every metric without hiding
    columns behind an invisible scrollbar. Secondary metrics yield first; the
    model, provider, upstream, strategy, state and actions stay. */
-@media (max-width: 1180px) {
+@media (max-width: 1439px) {
   .page-col-optional { display: none; }
   /* The hint describes columns that are hidden at this width. */
   .routes-panel .shell-panel-meta .hint { display: none; }
