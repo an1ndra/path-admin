@@ -165,6 +165,19 @@ td.actions button { padding: 4px 8px; font-size: 12px; margin-left: 6px; }
 
 .modal-backdrop { position: fixed; inset: 0; background: #00000099; display: grid; place-items: center; padding: 24px; z-index: 10; }
 .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; padding: 20px; }
+.modal.modal-wide { max-width: 760px; }
+.modal-intro { margin: 0 0 4px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.form-section {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 18px 0 10px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+}
+.form-section .muted { font-size: 11px; text-transform: none; letter-spacing: 0; }
+.form-summary {
+  margin: 16px 0 0; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 6px;
+  font-size: 12px; color: var(--muted);
+}
 .modal header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
 .modal header h2 { color: var(--text); font-size: 14px; text-transform: none; letter-spacing: 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
@@ -179,6 +192,25 @@ td.actions button { padding: 4px 8px; font-size: 12px; margin-left: 6px; }
 }
 .field input[type="checkbox"] { width: 16px; height: 16px; padding: 0; }
 .field small { color: var(--muted); font-size: 11px; }
+.field .with-suffix { position: relative; display: block; }
+.field .with-suffix input { width: 100%; padding-right: 54px; }
+.field .suffix {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: var(--muted); pointer-events: none;
+}
+
+/* --- facts and digest --------------------------------------------------- */
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 20px; margin: 0; padding: 14px 16px; }
+.facts > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.facts dt { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.facts dd { margin: 0; font-size: 13px; color: var(--text); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.facts dd code { font-size: 12px; color: var(--muted); }
+.digest {
+  margin: 12px 0 0; padding: 12px 14px; overflow-x: auto;
+  background: #0b0e14; border: 1px solid var(--line); border-radius: 6px;
+  font-size: 12px; line-height: 1.55; color: var(--text); white-space: pre-wrap;
+}
 @media (max-width: 640px) { .fields { grid-template-columns: 1fr; } }
 
 /* --- errors ------------------------------------------------------------ */

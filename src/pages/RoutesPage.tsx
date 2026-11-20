@@ -14,35 +14,71 @@ export function RoutesPage() {
   const [creating, setCreating] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
-  const fields: FieldSpec[] = [
-    { name: "public_model_id", label: "Public model", required: true, placeholder: "gpt-4o-mini" },
+  const basics: FieldSpec[] = [
+    {
+      name: "public_model_id",
+      label: "Public model id",
+      required: true,
+      placeholder: "gpt-4o-mini",
+      hint: "what clients send in \"model\"; an alias works too",
+    },
     {
       name: "provider_id",
       label: "Provider",
       type: "select",
-      options: (providers.data ?? []).map((p) => ({ value: String(p.id), label: p.slug })),
+      required: true,
+      placeholder: "Select a provider…",
+      options: (providers.data ?? []).map((p) => ({
+        value: String(p.id),
+        label: `${p.slug} · ${p.type.toLowerCase()}`,
+      })),
     },
-    { name: "upstream_model_id", label: "Upstream model / deployment", required: true },
-    { name: "input_price_per_million", label: "Input $/M", type: "number" },
-    { name: "output_price_per_million", label: "Output $/M", type: "number" },
-    { name: "cached_input_price_per_million", label: "Cached input $/M", type: "number" },
-    { name: "priority", label: "Priority", type: "number", hint: "lower is tried first" },
+    {
+      name: "upstream_model_id",
+      label: "Upstream model / deployment",
+      required: true,
+      placeholder: "gpt-4o-mini",
+      hint: "the id the provider itself expects",
+    },
+  ];
+  const pricing: FieldSpec[] = [
+    { name: "input_price_per_million", label: "Input", type: "number", suffix: "$/M" },
+    { name: "output_price_per_million", label: "Output", type: "number", suffix: "$/M" },
+    { name: "cached_input_price_per_million", label: "Cached input", type: "number", suffix: "$/M" },
+  ];
+  const routing: FieldSpec[] = [
+    { name: "priority", label: "Priority", type: "number", hint: "lower is tried first", placeholder: "100" },
     {
       name: "strategy",
       label: "Strategy",
       type: "select",
       options: [
-        { value: "priority", label: "priority" },
-        { value: "fastest", label: "fastest" },
-        { value: "cheapest-viable", label: "cheapest-viable" },
+        { value: "priority", label: "priority — declared order" },
+        { value: "fastest", label: "fastest — lowest EWMA latency" },
+        { value: "cheapest-viable", label: "cheapest-viable — under the SLO" },
       ],
     },
-    { name: "latency_slo_ms", label: "Latency SLO (ms)", type: "number", hint: "cheapest-viable only" },
-    { name: "context_length", label: "Context length", type: "number" },
-    { name: "cache_enabled", label: "Exact cache", type: "checkbox" },
-    { name: "semantic_cache_enabled", label: "Semantic cache", type: "checkbox" },
+    { name: "latency_slo_ms", label: "Latency SLO", type: "number", suffix: "ms", hint: "cheapest-viable only" },
+    { name: "context_length", label: "Context length", type: "number", suffix: "tokens" },
+  ];
+  const caching: FieldSpec[] = [
+    { name: "cache_enabled", label: "Exact-match cache", type: "checkbox", hint: "temperature 0, tool-free requests only" },
+    { name: "semantic_cache_enabled", label: "Semantic cache", type: "checkbox", hint: "needs a semantic embedding model" },
     { name: "semantic_threshold", label: "Semantic threshold", type: "number", hint: "0.5–1.0, default 0.95" },
   ];
+  const fields: FieldSpec[] = [...basics, ...pricing, ...routing, ...caching];
+  const ready =
+    Boolean(form.values.public_model_id?.trim()) &&
+    Boolean(form.values.provider_id) &&
+    Boolean(form.values.upstream_model_id?.trim());
+  const selectedProvider = (providers.data ?? []).find(
+    (p) => String(p.id) === form.values.provider_id,
+  );
+  const summary = ready
+    ? `${form.values.public_model_id.trim()} → ${selectedProvider?.slug ?? "provider"} / ${
+        form.values.upstream_model_id.trim()
+      }${form.values.strategy && form.values.strategy !== "priority" ? ` · ${form.values.strategy}` : ""}`
+    : null;
 
   async function create() {
     form.setBusy(true);
@@ -88,7 +124,7 @@ export function RoutesPage() {
       <div className="page-head">
         <h1>Routes</h1>
         <button className="primary" onClick={() => { form.reset({ strategy: "priority" }); setCreating(true); }}>
-          New route
+          Add model
         </button>
       </div>
       {note ? <p className="note">{note}</p> : null}
@@ -147,13 +183,32 @@ export function RoutesPage() {
       </Panel>
 
       {creating ? (
-        <Modal title="New route" onClose={() => setCreating(false)}>
-          <Fields spec={fields} form={form} />
+        <Modal title="Add model" wide onClose={() => setCreating(false)}>
+          <p className="modal-intro">
+            A route maps one public model id to one provider. Add a second route with the same
+            public id and a higher priority to create a fallback chain.
+          </p>
+
+          <h3 className="form-section">Model</h3>
+          <Fields spec={basics} form={form} />
+
+          <h3 className="form-section">
+            Pricing <span className="muted">optional — leave blank and the route stays unpriced</span>
+          </h3>
+          <Fields spec={pricing} form={form} />
+
+          <h3 className="form-section">Routing</h3>
+          <Fields spec={routing} form={form} />
+
+          <h3 className="form-section">Caching</h3>
+          <Fields spec={caching} form={form} />
+
+          {summary ? <p className="form-summary">{summary}</p> : null}
           {form.error ? <ErrorNote error={form.error} /> : null}
           <div className="modal-actions">
             <button className="ghost" onClick={() => setCreating(false)}>Cancel</button>
-            <button className="primary" disabled={form.busy} onClick={create}>
-              {form.busy ? "Creating…" : "Create route"}
+            <button className="primary" disabled={!ready || form.busy} onClick={create}>
+              {form.busy ? "Adding…" : "Add model"}
             </button>
           </div>
         </Modal>

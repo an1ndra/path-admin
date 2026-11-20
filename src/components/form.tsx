@@ -9,6 +9,8 @@ export type FieldSpec = {
   hint?: string;
   wide?: boolean;
   required?: boolean;
+  /** Rendered inside the input, right-aligned, e.g. "$/M". */
+  suffix?: string;
 };
 
 export type Values = Record<string, string>;
@@ -75,6 +77,7 @@ export function Fields({
               value={form.values[field.name] ?? ""}
               onChange={(e) => form.set(field.name, e.target.value)}
             >
+              {field.placeholder ? <option value="">{field.placeholder}</option> : null}
               {(field.options ?? []).map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
@@ -88,15 +91,18 @@ export function Fields({
               onChange={(e) => form.set(field.name, e.target.checked ? "true" : "false")}
             />
           ) : (
-            <input
-              type={field.type === "number" ? "text" : (field.type ?? "text")}
-              inputMode={field.type === "number" ? "decimal" : undefined}
-              placeholder={field.placeholder}
-              value={form.values[field.name] ?? ""}
-              onChange={(e) => form.set(field.name, e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-            />
+            <span className={field.suffix ? "with-suffix" : undefined}>
+              <input
+                type={field.type === "number" ? "text" : (field.type ?? "text")}
+                inputMode={field.type === "number" ? "decimal" : undefined}
+                placeholder={field.placeholder}
+                value={form.values[field.name] ?? ""}
+                onChange={(e) => form.set(field.name, e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {field.suffix ? <span className="suffix">{field.suffix}</span> : null}
+            </span>
           )}
           {field.hint ? <small>{field.hint}</small> : null}
         </label>
@@ -109,14 +115,16 @@ export function Modal({
   title,
   children,
   onClose,
+  wide,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  wide?: boolean;
 }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className={wide ? "modal modal-wide" : "modal"} onClick={(e) => e.stopPropagation()}>
         <header>
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Close dialog" title="Close">

@@ -15,6 +15,22 @@ export interface Stats {
   by_provider?: Record<string, { requests: number; cost_usd: number }>;
 }
 
+export interface GatewaySettings {
+  auth_mode: "token" | "proxy" | string;
+  subject?: string | null;
+  scopes?: string[];
+  can_write?: boolean;
+  prompt_logging: boolean;
+  guardrails?: {
+    prompt_log_redaction: boolean;
+    redact_before_send: boolean;
+    moderation: boolean;
+  };
+  rate_limit_backend: string;
+  public_models: boolean;
+  demo_key_bootstrap: boolean;
+}
+
 export interface ProviderRow {
   id: number;
   slug: string;
