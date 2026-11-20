@@ -76,6 +76,7 @@ export function RoutesPage() {
       <Panel
         title="Model routing"
         hint="EWMA is per JVM"
+        className="routes-panel"
         actions={
           loaded ? (
             <span className="page-count" aria-live="polite">
@@ -105,13 +106,13 @@ export function RoutesPage() {
             <thead>
               <tr>
                 <th scope="col">Public model</th>
-                <th scope="col">Provider</th>
-                <th scope="col">Upstream</th>
-                <th scope="col">Strategy</th>
-                <th scope="col" className="page-num">EWMA</th>
-                <th scope="col" className="page-num">Errors</th>
-                <th scope="col" className="page-num">In $/M</th>
-                <th scope="col">Cache</th>
+                <th scope="col" className="page-col-mid">Provider</th>
+                <th scope="col" className="page-col-wide">Upstream</th>
+                <th scope="col" className="page-col-optional">Strategy</th>
+                <th scope="col" className="page-num page-col-optional">EWMA</th>
+                <th scope="col" className="page-num page-col-optional">Errors</th>
+                <th scope="col" className="page-num page-col-optional">In $/M</th>
+                <th scope="col" className="page-col-optional">Cache</th>
                 <th scope="col">State</th>
                 <th scope="col" className="page-col-actions">
                   <span className="page-sr">Actions</span>
@@ -124,29 +125,29 @@ export function RoutesPage() {
                   <th scope="row" className="page-model">
                     {r.public_model_id}
                   </th>
-                  <td className="muted page-trunc" title={r.provider}>
+                  <td className="muted page-trunc page-col-mid" title={r.provider}>
                     {r.provider}
                   </td>
-                  <td className="muted page-trunc" title={r.upstream_model_id}>
+                  <td className="muted page-trunc page-col-wide" title={r.upstream_model_id}>
                     {r.upstream_model_id}
                   </td>
-                  <td>
+                  <td className="page-col-optional">
                     <Badge tone={r.strategy === "priority" ? "neutral" : "info"}>{r.strategy}</Badge>
                   </td>
-                  <td className="page-num">{r.ewma_latency_ms ? ms(r.ewma_latency_ms) : "—"}</td>
+                  <td className="page-num page-col-optional">{r.ewma_latency_ms ? ms(r.ewma_latency_ms) : "—"}</td>
                   <td
                     className={
                       (r.ewma_error_rate ?? 0) >= 0.05
-                        ? "page-num page-error-high"
+                        ? "page-num page-error-high page-col-optional"
                         : (r.ewma_error_rate ?? 0) > 0
-                          ? "page-num page-error-some"
-                          : "page-num"
+                          ? "page-num page-error-some page-col-optional"
+                          : "page-num page-col-optional"
                     }
                   >
                     {r.ewma_error_rate ? `${Math.round(r.ewma_error_rate * 100)}%` : "0%"}
                   </td>
-                  <td className="page-num">{usd(r.input_price_per_million)}</td>
-                  <td>
+                  <td className="page-num page-col-optional">{usd(r.input_price_per_million)}</td>
+                  <td className="page-col-optional">
                     {r.cache_enabled ? (
                       <Badge tone={r.semantic_cache_enabled ? "info" : "neutral"}>
                         {r.semantic_cache_enabled ? "semantic" : "exact"}

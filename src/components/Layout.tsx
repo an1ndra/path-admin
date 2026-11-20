@@ -30,10 +30,20 @@ export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const wasOpen = useRef(false);
 
-  // A route change always closes the phone drawer.
   useEffect(() => {
+    if (menuOpen) wasOpen.current = true;
+  }, [menuOpen]);
+
+  // A route change closes the drawer and moves focus to the new page, so a keyboard
+  // user does not land back on <body>.
+  useEffect(() => {
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
     setMenuOpen(false);
+    mainRef.current?.focus();
   }, [path]);
 
   useEffect(() => {
@@ -165,81 +175,86 @@ export function Layout() {
           <div
             className="shell-mobile-backdrop"
             aria-hidden="true"
-            onMouseDown={() => setMenuOpen(false)}
+            onMouseDown={() => {
+              setMenuOpen(false);
+              toggleRef.current?.focus();
+            }}
           />
-          <div
-            className="shell-mobile-menu"
-            id="shell-mobile-menu"
-            ref={menuRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu"
-          >
-            <div className="shell-mobile-head">
-              <span className="shell-brand">
-                <span className="dot" aria-hidden="true" />
-                <span className="shell-brand-name">Path</span>
-              </span>
-              <button
-                type="button"
-                className="shell-mobile-close"
-                aria-label="Close menu"
-                onClick={() => {
-                  setMenuOpen(false);
-                  toggleRef.current?.focus();
-                }}
-              >
-                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
-                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-
-            <nav className="shell-mobile-nav" aria-label="Primary">
-              {NAV.map((group) => (
-                <div className="shell-mobile-group" key={group.label}>
-                  <p className="shell-nav-label">{group.label}</p>
-                  {group.items.map((item) => {
-                    const active = path === item.to;
-                    return (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        className={active ? "shell-mobile-link active" : "shell-mobile-link"}
-                        aria-current={active ? "page" : undefined}
-                      >
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
-            </nav>
-
-            <div className="shell-mobile-foot">
-              <div>
-                <span>Gateway</span>
-                <code>{trimOrigin(gatewayOrigin) || "same origin"}</code>
-              </div>
-              <div>
-                <span>Auth</span>
-                <code>{mode === "proxy" ? "SSO proxy" : "Admin token"}</code>
-              </div>
-              <div>
-                <span>Build</span>
-                <code>{__BUILD_ID__}</code>
-              </div>
-              {mode === "token" ? (
-                <button type="button" className="shell-mobile-signout" onClick={signOut}>
-                  Sign out
-                </button>
-              ) : null}
-            </div>
-          </div>
         </>
       ) : null}
 
-      <main className="content" id="main-content" tabIndex={-1}>
+      <div
+        className="shell-mobile-menu"
+        id="shell-mobile-menu"
+        ref={menuRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+        hidden={!menuOpen}
+      >
+        <div className="shell-mobile-head">
+          <span className="shell-brand">
+            <span className="dot" aria-hidden="true" />
+            <span className="shell-brand-name">Path</span>
+          </span>
+          <button
+            type="button"
+            className="shell-mobile-close"
+            aria-label="Close menu"
+            onClick={() => {
+              setMenuOpen(false);
+              toggleRef.current?.focus();
+            }}
+          >
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="shell-mobile-nav" aria-label="Primary">
+          {NAV.map((group) => (
+            <div className="shell-mobile-group" key={group.label}>
+              <p className="shell-nav-label">{group.label}</p>
+              {group.items.map((item) => {
+                const active = path === item.to;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={active ? "shell-mobile-link active" : "shell-mobile-link"}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <div className="shell-mobile-foot">
+          <div>
+            <span>Gateway</span>
+            <code>{trimOrigin(gatewayOrigin) || "same origin"}</code>
+          </div>
+          <div>
+            <span>Auth</span>
+            <code>{mode === "proxy" ? "SSO proxy" : "Admin token"}</code>
+          </div>
+          <div>
+            <span>Build</span>
+            <code>{__BUILD_ID__}</code>
+          </div>
+          {mode === "token" ? (
+            <button type="button" className="shell-mobile-signout" onClick={signOut}>
+              Sign out
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <main className="content" id="main-content" tabIndex={-1} ref={mainRef}>
         <Outlet />
       </main>
     </div>
