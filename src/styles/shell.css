@@ -568,7 +568,15 @@
 /* --- narrow viewports --------------------------------------------------- */
 
 @media (max-width: 940px) {
+  /* The desktop rule pins the sidebar to 100vh; below this width it is a top bar,
+     so it must size to its content and let the page continue underneath. */
   .shell .shell-sidebar {
+    position: sticky;
+    top: 0;
+    height: auto;
+    align-self: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
     flex-direction: row;
     align-items: center;
     gap: 14px;
