@@ -4,11 +4,12 @@ import { useAsync } from "../useAsync";
 import { usd, when } from "../format";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
-import { Fields, Modal, toPayload, useForm, type FieldSpec } from "../components/form";
+import { Fields, toPayload, useForm, type FieldSpec } from "../components/form";
+import { Dialog, DialogActions, DialogSection, DialogSummary } from "../components/Dialog";
 import type { KeyRow } from "../types";
 
 const IDENTITY: FieldSpec[] = [
-  { name: "name", label: "Name", required: true, placeholder: "checkout-service" },
+  { name: "name", label: "Name", required: true, wide: true, placeholder: "checkout-service" },
   {
     name: "allowed_models",
     label: "Allowed models",
@@ -146,42 +147,88 @@ export function KeysPage() {
       </Panel>
 
       {creating ? (
-        <Modal title="New client key" wide onClose={() => setCreating(false)}>
-          <p className="modal-intro">
-            The key is shown once after creation. Budgets are optional; leave a limit blank for
-            no cap. Per-key limits apply in addition to the project's caps.
-          </p>
-          <h3 className="form-section">Identity</h3>
-          <Fields spec={IDENTITY} form={form} />
-          <h3 className="form-section">Spend</h3>
-          <Fields spec={SPEND} form={form} />
-          <h3 className="form-section">Rate and size limits</h3>
-          <Fields spec={LIMITS} form={form} />
-          {form.error ? <ErrorNote error={form.error} /> : null}
-          <div className="modal-actions">
-            <button className="ghost" onClick={() => setCreating(false)}>Cancel</button>
-            <button
-              className="primary"
-              disabled={form.busy || !form.values.name?.trim()}
-              onClick={create}
-            >
-              {form.busy ? "Creating…" : "Create key"}
-            </button>
-          </div>
-        </Modal>
+        <Dialog
+          title="New client key"
+          lede="The key is shown once after creation. Budgets and limits are optional; a blank limit means no cap, and per-key limits apply in addition to the project's."
+          onClose={() => setCreating(false)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            create();
+          }}
+          footer={
+            <>
+              <DialogSummary dim={!form.values.name?.trim()}>
+                {form.values.name?.trim()
+                  ? `${form.values.name.trim()}${
+                      form.values.credit_limit_usd ? ` · $${form.values.credit_limit_usd} credit` : ""
+                    }${form.values.rpm_limit ? ` · ${form.values.rpm_limit} rpm` : ""}`
+                  : "Name the key to create it."}
+              </DialogSummary>
+              {form.error ? <ErrorNote error={form.error} /> : null}
+              <DialogActions>
+                <button type="button" className="dlg-secondary" onClick={() => setCreating(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="dlg-primary"
+                  disabled={form.busy || !form.values.name?.trim()}
+                >
+                  {form.busy ? "Creating…" : "Create key"}
+                </button>
+              </DialogActions>
+            </>
+          }
+        >
+          <DialogSection label="Identity">
+            <Fields spec={IDENTITY} form={form} />
+          </DialogSection>
+          <DialogSection label="Spend" note="blank means no cap">
+            <Fields spec={SPEND} form={form} />
+          </DialogSection>
+          <DialogSection label="Rate and size limits">
+            <Fields spec={LIMITS} form={form} columns={3} />
+          </DialogSection>
+        </Dialog>
       ) : null}
 
       {topUp ? (
-        <Modal title={`Top up ${topUp.name}`} onClose={() => setTopUp(null)}>
-          <label className="field">
-            <span>Amount (USD)</span>
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
-          </label>
-          <div className="modal-actions">
-            <button className="ghost" onClick={() => setTopUp(null)}>Cancel</button>
-            <button className="primary" onClick={topUpKey}>Add credit</button>
-          </div>
-        </Modal>
+        <Dialog
+          title={`Top up ${topUp.name}`}
+          lede="Credit is added to the key immediately. Spend history and limits are unchanged."
+          onClose={() => setTopUp(null)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            topUpKey();
+          }}
+          footer={
+            <>
+              <DialogSummary dim={!amount.trim()}>
+                {amount.trim() ? `+$${amount} to ${topUp.name}` : "Enter an amount."}
+              </DialogSummary>
+              <DialogActions>
+                <button type="button" className="dlg-secondary" onClick={() => setTopUp(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="dlg-primary" disabled={!amount.trim()}>
+                  Add credit
+                </button>
+              </DialogActions>
+            </>
+          }
+        >
+          <DialogSection label="Amount">
+            <label className="field">
+              <span>Amount (USD)</span>
+              <input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                inputMode="decimal"
+                aria-label="Amount in US dollars"
+              />
+            </label>
+          </DialogSection>
+        </Dialog>
       ) : null}
     </>
   );

@@ -4,6 +4,7 @@ import { useAsync } from "../useAsync";
 import { Badge, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import { Fields, useForm, type FieldSpec } from "../components/form";
+import { Dialog, DialogActions, DialogSection, DialogSummary } from "../components/Dialog";
 import type { GatewaySettings } from "../types";
 
 interface MailSettings {
@@ -24,17 +25,17 @@ const MAIL_SERVER: FieldSpec[] = [
   {
     name: "username",
     label: "Username",
-    placeholder: "usually the API token or the mailbox user",
+    placeholder: "API token or mailbox user",
   },
   {
     name: "password",
     label: "Password",
     type: "password",
-    hint: "stored encrypted; blank keeps the current one, - clears it",
+    hint: "blank keeps the stored one; - clears it",
   },
 ];
 const MAIL_DELIVERY: FieldSpec[] = [
-  { name: "from", label: "From address", placeholder: "path@example.com" },
+  { name: "from", label: "From address", wide: true, placeholder: "path@example.com" },
   { name: "to", label: "Recipients", wide: true, hint: "comma separated" },
 ];
 const MAIL_SPEC: FieldSpec[] = [...MAIL_SERVER, ...MAIL_DELIVERY];
@@ -47,6 +48,7 @@ export function ConfigurationPage() {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [digest, setDigest] = useState<{ subject?: string; text?: string; reason?: string } | null>(null);
+  const [mailOpen, setMailOpen] = useState(false);
 
   async function saveMail() {
     form.setBusy(true);
@@ -68,8 +70,11 @@ export function ConfigurationPage() {
           : "Saved, but email alerting is off.",
       );
       await mail.reload();
+      setMailOpen(false);
+      return true;
     } catch (e) {
       form.setError(e);
+      return false;
     } finally {
       form.setBusy(false);
     }
@@ -227,12 +232,6 @@ export function ConfigurationPage() {
               )}
             </p>
 
-            <h3 className="form-section">SMTP server</h3>
-            <Fields spec={MAIL_SERVER} form={form} />
-            <h3 className="form-section">Delivery</h3>
-            <Fields spec={MAIL_DELIVERY} form={form} />
-            {form.error ? <ErrorNote error={form.error} /> : null}
-
             <div className="modal-actions">
               {currentMail?.configured ? (
                 <button className="ghost" onClick={disableMail}>
@@ -242,8 +241,8 @@ export function ConfigurationPage() {
               <button className="ghost" disabled={busy} onClick={testAlert}>
                 Send test alert
               </button>
-              <button className="primary" disabled={form.busy} onClick={saveMail}>
-                {form.busy ? "Saving…" : "Save"}
+              <button className="primary" onClick={() => setMailOpen(true)}>
+                {currentMail?.configured ? "Edit email" : "Configure email"}
               </button>
             </div>
             <p className="muted small">
@@ -270,6 +269,45 @@ export function ConfigurationPage() {
           ) : null}
         </div>
       </Panel>
+
+      {mailOpen ? (
+        <Dialog
+          title={currentMail?.configured ? "Alert email" : "Configure alert email"}
+          lede="Alerts are sent through this SMTP server. The password is encrypted and write-only; a blank field keeps the stored one."
+          onClose={() => setMailOpen(false)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            saveMail();
+          }}
+          footer={
+            <>
+              <DialogSummary
+                dim={!((form.values.host?.trim() || currentMail?.host) && (form.values.to?.trim() || currentMail?.to))}
+              >
+                {`${form.values.host?.trim() || currentMail?.host || "smtp host"}:${
+                  form.values.port || currentMail?.port || 587
+                } → ${form.values.to?.trim() || currentMail?.to || "no recipients"}`}
+              </DialogSummary>
+              {form.error ? <ErrorNote error={form.error} /> : null}
+              <DialogActions>
+                <button type="button" className="dlg-secondary" onClick={() => setMailOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="dlg-primary" disabled={form.busy}>
+                  {form.busy ? "Saving…" : "Save"}
+                </button>
+              </DialogActions>
+            </>
+          }
+        >
+          <DialogSection label="SMTP server">
+            <Fields spec={MAIL_SERVER} form={form} columns={3} />
+          </DialogSection>
+          <DialogSection label="Delivery">
+            <Fields spec={MAIL_DELIVERY} form={form} />
+          </DialogSection>
+        </Dialog>
+      ) : null}
     </>
   );
 }

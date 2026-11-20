@@ -60,12 +60,15 @@ export function toPayload(spec: FieldSpec[], values: Values): Record<string, unk
 export function Fields({
   spec,
   form,
+  columns,
 }: {
   spec: FieldSpec[];
   form: FormState;
+  /** 2 (default) or 3 equal tracks; pick the one that leaves no orphan cell. */
+  columns?: 3;
 }) {
   return (
-    <div className="fields">
+    <div className={columns === 3 ? "fields three" : "fields"}>
       {spec.map((field) =>
         field.type === "checkbox" ? (
           <label key={field.name} className="field check">

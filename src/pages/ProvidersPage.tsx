@@ -3,7 +3,8 @@ import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { Badge, Empty, Loading, Panel } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
-import { Fields, Modal, toPayload, useForm, type FieldSpec } from "../components/form";
+import { Fields, toPayload, useForm, type FieldSpec } from "../components/form";
+import { Dialog, DialogActions, DialogSection, DialogSummary } from "../components/Dialog";
 import type { ProviderRow } from "../types";
 
 const IDENTITY: FieldSpec[] = [
@@ -28,7 +29,7 @@ const ENDPOINT: FieldSpec[] = [
     placeholder: "https://api.openai.com/v1",
     hint: "for VERTEX this may be left blank; it is derived from the location",
   },
-  { name: "api_version", label: "api_version", hint: "Azure OpenAI only (deployment in the path)" },
+  { name: "api_version", label: "API version", hint: "Azure OpenAI only (deployment in the path)" },
   { name: "request_timeout_ms", label: "Request timeout", type: "number", suffix: "ms" },
   { name: "stream_idle_timeout_ms", label: "Stream idle timeout", type: "number", suffix: "ms" },
 ];
@@ -42,7 +43,7 @@ const CREDENTIAL: FieldSpec[] = [
     label: "Credential",
     type: "password",
     wide: true,
-    hint: "encrypted at rest; blank keeps the stored one. VERTEX takes the service-account JSON.",
+    hint: "blank keeps the stored one; VERTEX takes the service-account JSON",
   },
 ];
 const FIELDS: FieldSpec[] = [...IDENTITY, ...ENDPOINT, ...VERTEX, ...CREDENTIAL];
@@ -137,24 +138,55 @@ export function ProvidersPage() {
     setEditing(row);
   }
 
-  function providerForm() {
+  function providerSections() {
     return (
       <>
-        <h3 className="form-section">Identity</h3>
-        <Fields spec={IDENTITY} form={form} />
-
-        <h3 className="form-section">Endpoint</h3>
-        <Fields spec={ENDPOINT} form={form} />
-
+        <DialogSection label="Identity">
+          <Fields spec={IDENTITY} form={form} />
+        </DialogSection>
+        <DialogSection label="Endpoint" note="VERTEX may derive it from the location">
+          <Fields spec={ENDPOINT} form={form} columns={3} />
+        </DialogSection>
         {vertex ? (
-          <>
-            <h3 className="form-section">Vertex</h3>
+          <DialogSection label="Vertex" note="required for this wire format">
             <Fields spec={VERTEX} form={form} />
-          </>
+          </DialogSection>
         ) : null}
+        <DialogSection label="Credential" note="encrypted at rest">
+          <Fields spec={CREDENTIAL} form={form} />
+        </DialogSection>
+      </>
+    );
+  }
 
-        <h3 className="form-section">Credential</h3>
-        <Fields spec={CREDENTIAL} form={form} />
+  const summary = ready
+    ? `${form.values.slug?.trim()} · ${type} → ${
+        vertex
+          ? `${form.values.location?.trim()} / ${form.values.project?.trim()}`
+          : form.values.base_url?.trim()
+      }`
+    : "A slug and an endpoint are required.";
+
+  function footer(busyLabel: string, label: string) {
+    return (
+      <>
+        <DialogSummary dim={!ready}>{summary}</DialogSummary>
+        {form.error ? <ErrorNote error={form.error} /> : null}
+        <DialogActions>
+          <button
+            type="button"
+            className="dlg-secondary"
+            onClick={() => {
+              setCreating(false);
+              setEditing(null);
+            }}
+          >
+            Cancel
+          </button>
+          <button type="submit" className="dlg-primary" disabled={!ready || form.busy}>
+            {form.busy ? busyLabel : label}
+          </button>
+        </DialogActions>
       </>
     );
   }
@@ -214,33 +246,33 @@ export function ProvidersPage() {
       </Panel>
 
       {creating ? (
-        <Modal title="New provider" wide onClose={() => setCreating(false)}>
-          <p className="modal-intro">
-            A provider is one upstream endpoint. Add routes after creating it so clients can
-            reach its models.
-          </p>
-          {providerForm()}
-          {form.error ? <ErrorNote error={form.error} /> : null}
-          <div className="modal-actions">
-            <button className="ghost" onClick={() => setCreating(false)}>Cancel</button>
-            <button className="primary" disabled={form.busy || !ready} onClick={create}>
-              {form.busy ? "Creating…" : "Create provider"}
-            </button>
-          </div>
-        </Modal>
+        <Dialog
+          title="New provider"
+          lede="A provider is one upstream endpoint. Add routes after creating it so clients can reach its models."
+          onClose={() => setCreating(false)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            create();
+          }}
+          footer={footer("Creating…", "Create provider")}
+        >
+          {providerSections()}
+        </Dialog>
       ) : null}
 
       {editing ? (
-        <Modal title={`Edit ${editing.slug}`} wide onClose={() => setEditing(null)}>
-          {providerForm()}
-          {form.error ? <ErrorNote error={form.error} /> : null}
-          <div className="modal-actions">
-            <button className="ghost" onClick={() => setEditing(null)}>Cancel</button>
-            <button className="primary" disabled={form.busy || !ready} onClick={update}>
-              {form.busy ? "Saving…" : "Save changes"}
-            </button>
-          </div>
-        </Modal>
+        <Dialog
+          title={`Edit ${editing.slug}`}
+          lede="Credentials are write-only; leaving the field blank keeps the stored one."
+          onClose={() => setEditing(null)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            update();
+          }}
+          footer={footer("Saving…", "Save changes")}
+        >
+          {providerSections()}
+        </Dialog>
       ) : null}
     </>
   );
