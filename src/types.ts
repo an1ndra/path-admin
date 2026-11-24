@@ -8,6 +8,7 @@ export interface Stats {
     hit_ratio: number;
     savings_usd: number | string;
     semantic_hits?: number;
+    exact_hits?: number;
   };
   latency_ms?: { p50: number; p95: number; p99: number };
   fallback_requests?: number;

@@ -492,7 +492,7 @@ export function Dashboard() {
         <Kpi
           label="Cache"
           value={`${Math.round(cacheRatio * 100)}%`}
-          hint="hit rate"
+          hint="prompt cache"
           meter={{
             ratio: cacheRatio,
             label: `${Math.round(cacheRatio * 100)}% of prompt tokens served from cache`,
@@ -500,14 +500,9 @@ export function Dashboard() {
           foot={
             <>
               <span>{usd(s.cache?.savings_usd)} saved</span>
-              {s.cache?.semantic_hits !== undefined ? (
-                <span>
-                  {num(s.cache.semantic_hits)} semantic hit
-                  {s.cache.semantic_hits === 1 ? "" : "s"}
-                </span>
-              ) : (
-                <span>{num(s.cache?.cached_input_tokens)} cached tokens</span>
-              )}
+              <span>{num(s.cache?.exact_hits ?? 0)} exact</span>
+              <span>{num(s.cache?.semantic_hits ?? 0)} semantic</span>
+              <span>{num(s.cache?.cached_input_tokens)} cached tokens</span>
             </>
           }
         />
