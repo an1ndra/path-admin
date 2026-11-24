@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { clearToken, detectAuthMode, getToken, setToken } from "./api";
+import { cacheClear } from "./cache";
 
 type Mode = "unknown" | "token" | "proxy";
 
@@ -34,10 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         mode,
         signIn: (value: string) => {
+          cacheClear();
           setToken(value.trim());
           set(value.trim());
         },
         signOut: () => {
+          cacheClear();
           clearToken();
           set(null);
         },

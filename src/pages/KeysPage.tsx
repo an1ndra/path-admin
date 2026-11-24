@@ -3,7 +3,7 @@ import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { capabilities } from "../capabilities";
 import { usd, when } from "../format";
-import { Badge, Empty, Loading, Panel } from "../components/ui";
+import { Badge, Empty, Panel, SkeletonTable, Updating } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import {
   Fields,
@@ -101,8 +101,8 @@ const LIMITS: FieldSpec[] = [
 const SPEC: FieldSpec[] = [...IDENTITY, ...BUDGETS, ...LIMITS];
 
 export function KeysPage() {
-  const keys = useAsync(() => api<KeyRow[]>("/admin/keys"), []);
-  const caps = useAsync(capabilities, []);
+  const keys = useAsync(() => api<KeyRow[]>("/admin/keys"), [], "admin:keys");
+  const caps = useAsync(capabilities, [], "admin:capabilities");
   const canWrite = caps.data?.can_write !== false;
   const readOnlyHint = canWrite ? undefined : "This token is read-only";
   const form = useForm({});
@@ -232,9 +232,13 @@ export function KeysPage() {
           </button>
         </p>
       ) : null}
-      <Panel title="Client keys" hint="what your applications authenticate with">
-        {keys.loading ? (
-          <Loading />
+      <Panel
+        title="Client keys"
+        hint="what your applications authenticate with"
+        actions={keys.loading && keys.data ? <Updating label="Refreshing keys…" /> : undefined}
+      >
+        {keys.loading && !keys.data ? (
+          <SkeletonTable rows={5} columns={8} />
         ) : keys.error ? (
           <ErrorNote error={keys.error} />
         ) : (keys.data ?? []).length === 0 ? (

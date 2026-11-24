@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { capabilities } from "../capabilities";
-import { Badge, Empty, Loading, Panel } from "../components/ui";
+import { Badge, Empty, Panel, SkeletonTable, Updating } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import {
   Fields,
@@ -101,8 +101,8 @@ const CREDENTIAL: FieldSpec[] = [
 const FIELDS: FieldSpec[] = [...IDENTITY, ...ENDPOINT, ...VERTEX, ...CREDENTIAL];
 
 export function ProvidersPage() {
-  const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), []);
-  const caps = useAsync(capabilities, []);
+  const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), [], "admin:providers");
+  const caps = useAsync(capabilities, [], "admin:capabilities");
   const canWrite = caps.data?.can_write !== false;
   const readOnlyHint = canWrite ? undefined : "This token is read-only";
   const form = useForm({ type: "openai" });
@@ -318,9 +318,13 @@ export function ProvidersPage() {
         </p>
       ) : null}
       {note ? <p className="note">{note}</p> : null}
-      <Panel title="Upstreams" hint="circuit state is per JVM">
-        {providers.loading ? (
-          <Loading />
+      <Panel
+        title="Upstreams"
+        hint="circuit state is per JVM"
+        actions={providers.loading && providers.data ? <Updating label="Refreshing providers…" /> : undefined}
+      >
+        {providers.loading && !providers.data ? (
+          <SkeletonTable rows={4} columns={6} />
         ) : providers.error ? (
           <ErrorNote error={providers.error} />
         ) : (providers.data ?? []).length === 0 ? (

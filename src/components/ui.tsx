@@ -110,3 +110,82 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
     </div>
   );
 }
+
+/**
+ * A single skeleton block. Skeletons keep the page's rhythm while content loads, so the
+ * shell never collapses to a spinner and the layout does not jump when data arrives.
+ */
+export function Skeleton({
+  className,
+  width,
+  height,
+}: {
+  className?: string;
+  width?: string | number;
+  height?: string | number;
+}) {
+  return (
+    <span
+      className={className ? `skeleton ${className}` : "skeleton"}
+      style={{
+        width: typeof width === "number" ? `${width}px` : width,
+        height: typeof height === "number" ? `${height}px` : height,
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
+/** Placeholder rows shaped like a data table, used while a table makes its first request. */
+export function SkeletonTable({ rows = 6, columns = 6 }: { rows?: number; columns?: number }) {
+  return (
+    <div className="skeleton-table" aria-hidden="true">
+      <div
+        className="skeleton-table-row is-head"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length: columns }, (_, i) => (
+          <Skeleton key={i} className="skeleton-cell" />
+        ))}
+      </div>
+      {Array.from({ length: rows }, (_, row) => (
+        <div
+          key={row}
+          className="skeleton-table-row"
+          style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+        >
+          {Array.from({ length: columns }, (_, column) => (
+            <Skeleton
+              key={column}
+              className={column === 0 ? "skeleton-cell is-wide" : "skeleton-cell"}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Placeholder rows for definition lists such as session, gateway or guardrail facts. */
+export function SkeletonFacts({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="skeleton-facts" aria-hidden="true">
+      {Array.from({ length: rows }, (_, i) => (
+        <div className="skeleton-fact" key={i}>
+          <Skeleton className="skeleton-fact-label" />
+          <Skeleton className="skeleton-fact-value" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A quiet inline indicator for a background refresh that keeps the old data on screen. */
+export function Updating({ label = "Updating…" }: { label?: string }) {
+  return (
+    <span className="page-updating" role="status" aria-live="polite">
+      <span className="page-updating-dot" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}

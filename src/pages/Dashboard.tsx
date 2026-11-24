@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { useAsync } from "../useAsync";
 import { ms, num, usd, when } from "../format";
-import { Badge, Empty, Panel } from "../components/ui";
+import { Badge, Empty, Panel, SkeletonTable, Updating } from "../components/ui";
 import { Bars, Ranked, Spark, type Bar } from "../components/chart";
 import { ErrorNote } from "../components/ErrorNote";
 import type { ProviderRow, Stats, UsageRow } from "../types";
@@ -225,11 +225,12 @@ export function Dashboard() {
     customButton.current?.focus();
   }
 
-  const stats = useAsync(() => api<Stats>(`/admin/stats?window=${window}`), [window]);
-  const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), []);
+  const stats = useAsync(() => api<Stats>(`/admin/stats?window=${window}`), [window], `admin:stats:${window}`);
+  const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), [], "admin:providers");
   const usage = useAsync(
     () => api<{ data: UsageRow[] }>(`/admin/usage?window=${window}&limit=1000`),
     [window],
+    `admin:usage:${window}`,
   );
 
   const all = usage.data?.data ?? [];
@@ -547,9 +548,12 @@ export function Dashboard() {
             ? "loading"
             : `${label} · ${num(rows.length)} calls · ${durationText(bucketMs)} per bar`
         }
+        actions={usage.loading && usage.data ? <Updating label="Refreshing…" /> : undefined}
       >
         {usage.error ? (
           <ErrorNote error={usage.error} />
+        ) : usage.loading && !usage.data ? (
+          <SkeletonTable rows={4} columns={6} />
         ) : (
           <Bars
             data={buckets}
@@ -575,9 +579,10 @@ export function Dashboard() {
         <Panel
           title="Providers"
           hint={providers.data ? `${providers.data.length} configured` : "circuit state"}
+          actions={providers.loading && providers.data ? <Updating label="Refreshing…" /> : undefined}
         >
           {providers.loading && !providers.data ? (
-            <p className="empty dashboard-placeholder">Checking provider circuits…</p>
+            <SkeletonTable rows={3} columns={3} />
           ) : providers.error ? (
             <ErrorNote error={providers.error} />
           ) : (providers.data ?? []).length === 0 ? (
@@ -625,9 +630,10 @@ export function Dashboard() {
         <Panel
           title="Recent failures"
           hint={usage.loading && !usage.data ? "loading" : `${num(failures.length)} in ${label}`}
+          actions={usage.loading && usage.data ? <Updating label="Refreshing…" /> : undefined}
         >
           {usage.loading && !usage.data ? (
-            <p className="empty dashboard-placeholder">Loading recent calls…</p>
+            <SkeletonTable rows={4} columns={4} />
           ) : failures.length === 0 ? (
             <Empty>No failed calls in this window.</Empty>
           ) : (

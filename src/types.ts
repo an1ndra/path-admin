@@ -97,3 +97,20 @@ export interface UsageRow {
   attempts?: number;
   fallback_from?: string | null;
 }
+
+export interface AdminTokenRow {
+  id: number;
+  name: string;
+  masked_token: string;
+  scopes: string;
+  enabled: boolean;
+  created_at: string;
+}
+
+export interface CreatedAdminToken {
+  id: number;
+  name: string;
+  scopes: string;
+  token: string;
+  warning: string;
+}

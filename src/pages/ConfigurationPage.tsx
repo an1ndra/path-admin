@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { capabilities } from "../capabilities";
-import { Badge, Loading, Panel } from "../components/ui";
+import { Badge, Panel, SkeletonFacts, Updating } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import {
   Fields,
@@ -95,11 +95,11 @@ function mailSections(current: MailSettings | null | undefined): {
 
 /** Gateway switches and delivery. Account and token live on Settings. */
 export function ConfigurationPage() {
-  const settings = useAsync(() => api<GatewaySettings>("/admin/settings"), []);
-  const caps = useAsync(capabilities, []);
+  const settings = useAsync(() => api<GatewaySettings>("/admin/settings"), [], "admin:settings");
+  const caps = useAsync(capabilities, [], "admin:capabilities");
   const canWrite = caps.data?.can_write !== false;
   const readOnlyHint = canWrite ? undefined : "This token is read-only";
-  const mail = useAsync(() => api<MailSettings>("/admin/mail-settings"), []);
+  const mail = useAsync(() => api<MailSettings>("/admin/mail-settings"), [], "admin:mail-settings");
   const form = useForm({});
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -255,9 +255,13 @@ export function ConfigurationPage() {
       </header>
       {note ? <p className="note">{note}</p> : null}
 
-      <Panel title="Gateway" hint={gw?.auth_mode === "proxy" ? "SSO proxy" : "token auth"}>
-        {settings.loading ? (
-          <Loading />
+      <Panel
+        title="Gateway"
+        hint={gw?.auth_mode === "proxy" ? "SSO proxy" : "token auth"}
+        actions={settings.loading && settings.data ? <Updating label="Refreshing…" /> : undefined}
+      >
+        {settings.loading && !settings.data ? (
+          <SkeletonFacts rows={7} />
         ) : settings.error ? (
           <ErrorNote error={settings.error} />
         ) : (
@@ -304,9 +308,13 @@ export function ConfigurationPage() {
         )}
       </Panel>
 
-      <Panel title="Guardrails" hint="read-only here; set by environment">
-        {settings.loading ? (
-          <Loading />
+      <Panel
+        title="Guardrails"
+        hint="read-only here; set by environment"
+        actions={settings.loading && settings.data ? <Updating label="Refreshing…" /> : undefined}
+      >
+        {settings.loading && !settings.data ? (
+          <SkeletonFacts rows={3} />
         ) : (
           <dl className="facts">
             <div>
@@ -325,9 +333,13 @@ export function ConfigurationPage() {
         )}
       </Panel>
 
-      <Panel title="Alert email" hint={currentMail ? `source: ${currentMail.source}` : undefined}>
-        {mail.loading ? (
-          <Loading />
+      <Panel
+        title="Alert email"
+        hint={currentMail ? `source: ${currentMail.source}` : undefined}
+        actions={mail.loading && mail.data ? <Updating label="Refreshing…" /> : undefined}
+      >
+        {mail.loading && !mail.data ? (
+          <SkeletonFacts rows={4} />
         ) : mail.error ? (
           <ErrorNote error={mail.error} />
         ) : (

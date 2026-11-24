@@ -3,15 +3,15 @@ import { api, send } from "../api";
 import { useAsync } from "../useAsync";
 import { capabilities } from "../capabilities";
 import { ms, usd } from "../format";
-import { Badge, Empty, Loading, Panel } from "../components/ui";
+import { Badge, Empty, Panel, SkeletonTable, Updating } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import { AddModelDialog } from "../components/AddModelDialog";
 import type { ProviderRow, RouteRow } from "../types";
 
 export function RoutesPage() {
-  const routes = useAsync(() => api<RouteRow[]>("/admin/routes"), []);
-  const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), []);
-  const caps = useAsync(capabilities, []);
+  const routes = useAsync(() => api<RouteRow[]>("/admin/routes"), [], "admin:routes");
+  const providers = useAsync(() => api<ProviderRow[]>("/admin/providers"), [], "admin:providers");
+  const caps = useAsync(capabilities, [], "admin:capabilities");
   const canWrite = caps.data?.can_write !== false;
   const readOnlyHint = canWrite ? undefined : "This token is read-only";
   const [creating, setCreating] = useState(false);
@@ -39,7 +39,7 @@ export function RoutesPage() {
   }
 
   const rows = routes.data ?? [];
-  const loaded = !routes.loading && !routes.error;
+  const loaded = !routes.error && routes.data !== null;
 
   return (
     <>
@@ -78,15 +78,18 @@ export function RoutesPage() {
         hint="EWMA is per JVM"
         className="routes-panel"
         actions={
-          loaded ? (
-            <span className="page-count" aria-live="polite">
-              {rows.length} {rows.length === 1 ? "route" : "routes"}
-            </span>
-          ) : null
+          <>
+            {routes.loading && routes.data ? <Updating label="Refreshing routes…" /> : null}
+            {loaded ? (
+              <span className="page-count" aria-live="polite">
+                {rows.length} {rows.length === 1 ? "route" : "routes"}
+              </span>
+            ) : null}
+          </>
         }
       >
-        {routes.loading ? (
-          <Loading label="Loading routes…" />
+        {routes.loading && !routes.data ? (
+          <SkeletonTable rows={6} columns={7} />
         ) : routes.error ? (
           <ErrorNote error={routes.error} />
         ) : rows.length === 0 ? (

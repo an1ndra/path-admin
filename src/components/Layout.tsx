@@ -19,6 +19,7 @@ const NAV: { label: string; items: { to: string; label: string }[] }[] = [
     items: [
       { to: "/providers", label: "Providers" },
       { to: "/configuration", label: "Configuration" },
+      { to: "/access", label: "Access" },
       { to: "/settings", label: "Settings" },
     ],
   },

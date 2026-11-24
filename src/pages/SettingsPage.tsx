@@ -3,7 +3,7 @@ import { api, gatewayOrigin, setToken } from "../api";
 import { useAsync } from "../useAsync";
 import { useAuth } from "../auth";
 import { useTheme, type ThemeMode } from "../theme";
-import { Badge, Loading, Panel } from "../components/ui";
+import { Badge, Panel, SkeletonFacts, Updating } from "../components/ui";
 import { ErrorNote } from "../components/ErrorNote";
 import type { GatewaySettings } from "../types";
 
@@ -24,7 +24,7 @@ function describeScope(scope: string): string {
 export function SettingsPage() {
   const { mode, signIn, signOut } = useAuth();
   const { mode: themeMode, colorBlind, resolved, setMode: setThemeMode, setColorBlind } = useTheme();
-  const settings = useAsync(() => api<GatewaySettings>("/admin/settings"), []);
+  const settings = useAsync(() => api<GatewaySettings>("/admin/settings"), [], "admin:settings");
   const [token, setTokenValue] = useState("");
   const [note, setNote] = useState<string | null>(null);
 
@@ -54,9 +54,13 @@ export function SettingsPage() {
         </div>
       </header>
 
-      <Panel title="Session" hint={mode === "proxy" ? "SSO proxy" : "admin token"}>
-        {settings.loading ? (
-          <Loading label="Loading session…" />
+      <Panel
+        title="Session"
+        hint={mode === "proxy" ? "SSO proxy" : "admin token"}
+        actions={settings.loading && settings.data ? <Updating label="Refreshing session…" /> : undefined}
+      >
+        {settings.loading && !settings.data ? (
+          <SkeletonFacts rows={3} />
         ) : settings.error ? (
           <ErrorNote error={settings.error} />
         ) : (
