@@ -95,6 +95,7 @@ export interface UsageRow {
   error_code?: string | null;
   error_message?: string | null;
   upstream_request_id?: string | null;
+  request_id?: string | null;
   attempts?: number;
   fallback_from?: string | null;
 }

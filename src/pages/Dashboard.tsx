@@ -649,7 +649,7 @@ export function Dashboard() {
                     <td title={row.error_message ?? ""}>
                       <Badge tone="bad">{row.error_code ?? row.status}</Badge>
                     </td>
-                    <td className="muted mono">{row.upstream_request_id ?? "—"}</td>
+                    <td className="muted mono">{row.request_id ?? row.upstream_request_id ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
