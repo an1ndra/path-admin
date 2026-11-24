@@ -127,7 +127,7 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 /* Below this width the sidebar becomes a horizontal bar: a 208px column plus a table is
    unusable on a laptop with the browser at half width, let alone a tablet. */
 @media (max-width: 940px) {
-  .shell { grid-template-columns: minmax(0, 1fr); }
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .sidebar {
     position: sticky;
     top: 0;
