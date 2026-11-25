@@ -6,7 +6,10 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27-alpine
+# Pinned to a fixed release: 1.30.7+ (stable) closes the nginx2root CVEs disclosed on
+# 2026-11-18 (CVE-2026-123007, -123633, -121810, -123634, -113425) plus CVE-2026-118899;
+# 1.30.8 also fixes CVE-2026-132779. Do not float back to a bare major tag.
+FROM nginx:1.30.8-alpine
 # Runtime config: the same image works against any gateway, so the URL is injected by the
 # entrypoint rather than baked in at build time.
 ENV GATEWAY_URL=""
